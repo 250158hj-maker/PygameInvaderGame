@@ -76,12 +76,12 @@ SYSTEM_MIDDLE_FONT = pygame.font.SysFont(None, FONT_SIZE_MIDDLE)
 SYSTEM_SMALL_FONT = pygame.font.SysFont(None, FONT_SIZE_SMALL)
 
 # 描画用画像（文字列を画像に変換）
-CLEAR_MESSAGE_IMAGE = SYSTEM_MIDDLE_FONT.render(CLEAR_MESSAGE, True, COLOR_CYAN)
-GAMEOVER_MESSAGE_IMAGE = SYSTEM_MIDDLE_FONT.render(GAMEOVER_MESSAGE, True, COLOR_CYAN)
-TITLE_MESSAGE_IMAGE = SYSTEM_MIDDLE_FONT.render(TITLE_MESSAGE, True, COLOR_YELLOW)
-START_MESSAGE_IMAGE = SYSTEM_SMALL_FONT.render(START_MESSAGE, True, COLOR_WHITE)
-LEVEL_UP_MESSAGE_IMAGE = SYSTEM_MIDDLE_FONT.render(LEVEL_UP_MESSAGE, True, COLOR_YELLOW)
-DASH_MESSAGE_IMAGE = SYSTEM_SMALL_FONT.render(DASH_MESSAGE, True, COLOR_YELLOW)
+CLEAR_MESSAGE_SURFACE = SYSTEM_MIDDLE_FONT.render(CLEAR_MESSAGE, True, COLOR_CYAN)
+GAMEOVER_MESSAGE_SURFACE = SYSTEM_MIDDLE_FONT.render(GAMEOVER_MESSAGE, True, COLOR_CYAN)
+TITLE_MESSAGE_SURFACE = SYSTEM_MIDDLE_FONT.render(TITLE_MESSAGE, True, COLOR_YELLOW)
+START_MESSAGE_SURFACE = SYSTEM_SMALL_FONT.render(START_MESSAGE, True, COLOR_WHITE)
+LEVEL_UP_MESSAGE_SURFACE = SYSTEM_MIDDLE_FONT.render(LEVEL_UP_MESSAGE, True, COLOR_YELLOW)
+DASH_MESSAGE_SURFACE = SYSTEM_SMALL_FONT.render(DASH_MESSAGE, True, COLOR_YELLOW)
 
 
 # ======= メイン処理 =======
@@ -137,16 +137,16 @@ def main():
             surface.fill(COLOR_BLACK)
 
             # タイトル描画
-            title_rect = TITLE_MESSAGE_IMAGE.get_rect()
+            title_rect = TITLE_MESSAGE_SURFACE.get_rect()
             title_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 3)
-            surface.blit(TITLE_MESSAGE_IMAGE, title_rect.topleft)
+            surface.blit(TITLE_MESSAGE_SURFACE, title_rect.topleft)
 
             # スタートメッセージ描画
-            start_rect = START_MESSAGE_IMAGE.get_rect()
+            start_rect = START_MESSAGE_SURFACE.get_rect()
             start_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 50)
             # 点滅演出（ループカウンタを利用）
             if (pygame.time.get_ticks() // 500) % 2 == 0:
-                surface.blit(START_MESSAGE_IMAGE, start_rect.topleft)
+                surface.blit(START_MESSAGE_SURFACE, start_rect.topleft)
 
             # スペースキーでゲーム開始（初期化処理）
             if K_SPACE in keymap:
@@ -402,15 +402,15 @@ def main():
             )
             # ダッシュ中は点滅表示
             if is_dashing and loop_count % 2 == 0:
-                dash_rect = DASH_MESSAGE_IMAGE.get_rect()
+                dash_rect = DASH_MESSAGE_SURFACE.get_rect()
                 dash_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT - 30)
-                surface.blit(DASH_MESSAGE_IMAGE, dash_rect.topleft)
+                surface.blit(DASH_MESSAGE_SURFACE, dash_rect.topleft)
 
             # レベルアップ表示
             if levelup_timer > 0:
-                levelup_rect = LEVEL_UP_MESSAGE_IMAGE.get_rect()
+                levelup_rect = LEVEL_UP_MESSAGE_SURFACE.get_rect()
                 levelup_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
-                surface.blit(LEVEL_UP_MESSAGE_IMAGE, levelup_rect.topleft)
+                surface.blit(LEVEL_UP_MESSAGE_SURFACE, levelup_rect.topleft)
                 levelup_timer -= 1
 
         # ------------------------------------------------
@@ -437,16 +437,16 @@ def main():
 
             # メッセージ表示
             if game_state == GAME_STATE_CLEAR:
-                msg_rect = CLEAR_MESSAGE_IMAGE.get_rect()
+                msg_rect = CLEAR_MESSAGE_SURFACE.get_rect()
                 msg_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
-                surface.blit(CLEAR_MESSAGE_IMAGE, msg_rect.topleft)
+                surface.blit(CLEAR_MESSAGE_SURFACE, msg_rect.topleft)
             else:
-                msg_rect = GAMEOVER_MESSAGE_IMAGE.get_rect()
+                msg_rect = GAMEOVER_MESSAGE_SURFACE.get_rect()
                 msg_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
-                surface.blit(GAMEOVER_MESSAGE_IMAGE, msg_rect.topleft)
+                surface.blit(GAMEOVER_MESSAGE_SURFACE, msg_rect.topleft)
 
             # リトライメッセージ
-            retry_msg = START_MESSAGE_IMAGE
+            retry_msg = START_MESSAGE_SURFACE
             retry_rect = retry_msg.get_rect()
             retry_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 80)
             if (pygame.time.get_ticks() // 500) % 2 == 0:
