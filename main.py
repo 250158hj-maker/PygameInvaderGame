@@ -479,6 +479,8 @@ def main():
                 surface.blit(retry_msg, retry_rect.topleft)
 
             # スペースキーでリスタート
+            # 「GAMEOVER」時にSPACEキーが入力されているとタイトル画面へ、改めて入力されると即リスタートになる
+            # ゲーム性にそこまで影響がないので放置する
             if K_SPACE in keymap:
                 game_state = GAME_STATE_TITLE
                 # キー入力を一度クリアしておかないと、タイトル画面で即スタートしてしまうのを防ぐ
