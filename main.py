@@ -22,39 +22,36 @@ WINDOW_SIZE = (WINDOW_WIDTH, WINDOW_WIDTH)
 
 GAME_CAPTION = "*** Invader Game ***"
 
-
-# 色定数
+# 色
 COLOR_BLACK = (0, 0, 0)
 COLOR_WHITE = (255, 255, 255)
 COLOR_CYAN = (0, 255, 255)
 COLOR_YELLOW = (255, 255, 0)
 COLOR_GREEN = (0, 255, 0)
+COLOR_GRAY = (60, 60, 60)
+COLOR_ORANGE = (255, 165, 0)
 
-
-# ゲームメッセージ定数
+# ゲームメッセージ文字列
 CLEAR_MESSAGE = "CLEAR!!"
 GAMEOVER_MESSAGE = "GAME OVER!!"
 TITLE_MESSAGE = "INVADER GAME"
 START_MESSAGE = "PRESS SPACE TO START"
 LEVEL_UP_MESSAGE = "LEVEL UP!!"
+DASH_MESSAGE = "DASH!!"
 
-# フォント・メッセージ
-FONT_SIZE_MIDDLE = 72
-FONT_SIZE_SMALL = 36
 
-# ゲーム状態定数
+# ゲーム状態
 GAME_STATE_TITLE = "TITLE"
 GAME_STATE_PLAY = "PLAY"
 GAME_STATE_GAMEOVER = "GAMEOVER"
 GAME_STATE_CLEAR = "CLEAR"
 
 
-
-# 3点バースト用定数
+# 3点バースト
 BURST_COUNT = 3  # 1回のバーストで発射する弾数
 BURST_DELAY = 3  # バースト間の発射間隔（フレーム数）
 BURST_COOLDOWN = 15  # 次のバースト開始までのクールダウン
-# DASH用定数
+# 緊急回避機能
 DASH_SPEED = 40  # ダッシュ時の移動速度
 DASH_DURATION = 3  # ダッシュの持続フレーム数
 DASH_COOLDOWN_TIME = 30  # ダッシュのクールダウン（フレーム数）
@@ -71,17 +68,24 @@ pygame.display.set_caption(GAME_CAPTION)
 Drawable.set_window_info(surface, WINDOW_SIZE)
 
 
+# フォント
+FONT_SIZE_MIDDLE = 72
+FONT_SIZE_SMALL = 36
+
+SYSTEM_MIDDLE_FONT = pygame.font.SysFont(None, FONT_SIZE_MIDDLE)
+SYSTEM_SMALL_FONT = pygame.font.SysFont(None, FONT_SIZE_SMALL)
+
+# 描画用画像（文字列を画像に変換）
+CLEAR_MESSAGE_IMAGE = SYSTEM_MIDDLE_FONT.render(CLEAR_MESSAGE, True, COLOR_CYAN)
+GAMEOVER_MESSAGE_IMAGE = SYSTEM_MIDDLE_FONT.render(GAMEOVER_MESSAGE, True, COLOR_CYAN)
+TITLE_MESSAGE_IMAGE = SYSTEM_MIDDLE_FONT.render(TITLE_MESSAGE, True, COLOR_YELLOW)
+START_MESSAGE_IMAGE = SYSTEM_SMALL_FONT.render(START_MESSAGE, True, COLOR_WHITE)
+LEVEL_UP_MESSAGE_IMAGE = SYSTEM_MIDDLE_FONT.render(LEVEL_UP_MESSAGE, True, COLOR_YELLOW)
+DASH_MESSAGE_IMAGE = SYSTEM_SMALL_FONT.render(DASH_MESSAGE, True, COLOR_YELLOW)
+
+
 # ======= メイン処理 =======
 def main():
-    # フォント、メッセージ
-    sysfont = pygame.font.SysFont(None, FONT_SIZE_MIDDLE)
-    scorefont = pygame.font.SysFont(None, FONT_SIZE_SMALL)
-    msg_clear = sysfont.render(CLEAR_MESSAGE, True, COLOR_CYAN)
-    msg_over = sysfont.render(GAMEOVER_MESSAGE, True, COLOR_CYAN)
-    msg_title = sysfont.render(TITLE_MESSAGE, True, COLOR_YELLOW)
-    msg_start = scorefont.render(START_MESSAGE, True, COLOR_WHITE)
-    msg_levelup = sysfont.render(LEVEL_UP_MESSAGE, True, COLOR_YELLOW)
-
     # ゲームの初期状態設定
     game_state = GAME_STATE_TITLE
 
@@ -133,16 +137,16 @@ def main():
             surface.fill(COLOR_BLACK)
 
             # タイトル描画
-            title_rect = msg_title.get_rect()
+            title_rect = TITLE_MESSAGE_IMAGE.get_rect()
             title_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 3)
-            surface.blit(msg_title, title_rect.topleft)
+            surface.blit(TITLE_MESSAGE_IMAGE, title_rect.topleft)
 
             # スタートメッセージ描画
-            start_rect = msg_start.get_rect()
+            start_rect = START_MESSAGE_IMAGE.get_rect()
             start_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 50)
             # 点滅演出（ループカウンタを利用）
             if (pygame.time.get_ticks() // 500) % 2 == 0:
-                surface.blit(msg_start, start_rect.topleft)
+                surface.blit(START_MESSAGE_IMAGE, start_rect.topleft)
 
             # スペースキーでゲーム開始（初期化処理）
             if K_SPACE in keymap:
@@ -363,12 +367,12 @@ def main():
 
             # スコアの描画
             score_str = str(score).zfill(5)
-            score_image = scorefont.render(score_str, True, (0, 255, 0))
+            score_image = SYSTEM_SMALL_FONT.render(score_str, True, COLOR_GREEN)
             surface.blit(score_image, (500, 10))
 
             # レベルの描画
             level_str = f"Level {level}"
-            level_image = scorefont.render(level_str, True, (0, 255, 0))
+            level_image = SYSTEM_SMALL_FONT.render(level_str, True, COLOR_GREEN)
             surface.blit(level_image, (25, 10))
 
             # 【追加】ダッシュゲージの描画（画面下部）
@@ -379,15 +383,15 @@ def main():
             # ゲージ背景（グレー）
             pygame.draw.rect(
                 surface,
-                (60, 60, 60),
+                COLOR_GRAY,
                 (dash_gauge_x, dash_gauge_y, dash_gauge_width, dash_gauge_height),
             )
             # ゲージ本体（クールダウン残量に応じて増減） 本体の上に重ねて描画
             if dash_cooldown == 0:
-                gauge_color = (0, 255, 255)  # シアン（使用可能）
+                gauge_color = COLOR_CYAN
                 gauge_fill = dash_gauge_width
             else:
-                gauge_color = (255, 165, 0)  # オレンジ（クールダウン中）
+                gauge_color = COLOR_ORANGE
                 gauge_fill = int(
                     dash_gauge_width * (1 - dash_cooldown / DASH_COOLDOWN_TIME)
                 )
@@ -398,16 +402,15 @@ def main():
             )
             # ダッシュ中は点滅表示
             if is_dashing and loop_count % 2 == 0:
-                dash_text = scorefont.render("DASH!", True, (255, 255, 0))
-                dash_rect = dash_text.get_rect()
+                dash_rect = DASH_MESSAGE_IMAGE.get_rect()
                 dash_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT - 30)
-                surface.blit(dash_text, dash_rect.topleft)
+                surface.blit(DASH_MESSAGE_IMAGE, dash_rect.topleft)
 
             # レベルアップ表示
             if levelup_timer > 0:
-                levelup_rect = msg_levelup.get_rect()
+                levelup_rect = LEVEL_UP_MESSAGE_IMAGE.get_rect()
                 levelup_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
-                surface.blit(msg_levelup, levelup_rect.topleft)
+                surface.blit(LEVEL_UP_MESSAGE_IMAGE, levelup_rect.topleft)
                 levelup_timer -= 1
 
         # ------------------------------------------------
@@ -424,26 +427,26 @@ def main():
 
             # スコア描画
             score_str = str(score).zfill(5)
-            score_image = scorefont.render(score_str, True, COLOR_GREEN)
+            score_image = SYSTEM_SMALL_FONT.render(score_str, True, COLOR_GREEN)
             surface.blit(score_image, (500, 10))
 
             # レベルの描画
             level_str = f"Level {level}"
-            level_image = scorefont.render(level_str, True, COLOR_GREEN)
+            level_image = SYSTEM_SMALL_FONT.render(level_str, True, COLOR_GREEN)
             surface.blit(level_image, (25, 10))
 
             # メッセージ表示
             if game_state == GAME_STATE_CLEAR:
-                msg_rect = msg_clear.get_rect()
+                msg_rect = CLEAR_MESSAGE_IMAGE.get_rect()
                 msg_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
-                surface.blit(msg_clear, msg_rect.topleft)
+                surface.blit(CLEAR_MESSAGE_IMAGE, msg_rect.topleft)
             else:
-                msg_rect = msg_over.get_rect()
+                msg_rect = GAMEOVER_MESSAGE_IMAGE.get_rect()
                 msg_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
-                surface.blit(msg_over, msg_rect.topleft)
+                surface.blit(GAMEOVER_MESSAGE_IMAGE, msg_rect.topleft)
 
             # リトライメッセージ
-            retry_msg = scorefont.render("PRESS SPACE TO RETRY", True, (255, 255, 255))
+            retry_msg = START_MESSAGE_IMAGE
             retry_rect = retry_msg.get_rect()
             retry_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 80)
             if (pygame.time.get_ticks() // 500) % 2 == 0:
