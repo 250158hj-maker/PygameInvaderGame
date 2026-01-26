@@ -22,20 +22,32 @@ WINDOW_SIZE = (WINDOW_WIDTH, WINDOW_WIDTH)
 
 GAME_CAPTION = "*** Invader Game ***"
 
-# ゲーム状態定数
-GAME_STATE_TITLE = 'TITLE'
-GAME_STATE_PLAY = 'PLAY'
-GAME_STATE_GAMEOVER = 'GAMEOVER'
-GAME_STATE_CLEAR = 'CLEAR'
+
+# 色定数
+COLOR_BLACK = (0, 0, 0)
+COLOR_WHITE = (255, 255, 255)
+COLOR_CYAN = (0, 255, 255)
+COLOR_YELLOW = (255, 255, 0)
+COLOR_GREEN = (0, 255, 0)
+
 
 # ゲームメッセージ定数
-CLEAR_MESSAGE =  'CLEAR!!'
-GAMEOVER_MESSAGE = 'GAME OVER!!'
-TITLE_MESSAGE = 'INVADER GAME'
-START_MESSAGE = 'PRESS SPACE TO START'
-LEVEL_UP_MESSAGE = 'LEVEL UP!!'
+CLEAR_MESSAGE = "CLEAR!!"
+GAMEOVER_MESSAGE = "GAME OVER!!"
+TITLE_MESSAGE = "INVADER GAME"
+START_MESSAGE = "PRESS SPACE TO START"
+LEVEL_UP_MESSAGE = "LEVEL UP!!"
 
-# 描画用定数
+# フォント・メッセージ
+FONT_SIZE_MIDDLE = 72
+FONT_SIZE_SMALL = 36
+
+# ゲーム状態定数
+GAME_STATE_TITLE = "TITLE"
+GAME_STATE_PLAY = "PLAY"
+GAME_STATE_GAMEOVER = "GAMEOVER"
+GAME_STATE_CLEAR = "CLEAR"
+
 
 
 # 3点バースト用定数
@@ -62,13 +74,13 @@ Drawable.set_window_info(surface, WINDOW_SIZE)
 # ======= メイン処理 =======
 def main():
     # フォント、メッセージ
-    sysfont = pygame.font.SysFont(None, 72)
-    scorefont = pygame.font.SysFont(None, 36)
-    msg_clear = sysfont.render(CLEAR_MESSAGE, True, (0, 255, 225))
-    msg_over = sysfont.render(GAMEOVER_MESSAGE, True, (0, 255, 225))
-    msg_title = sysfont.render(TITLE_MESSAGE, True, (255, 255, 0))
-    msg_start = scorefont.render(START_MESSAGE, True, (255, 255, 255))
-    msg_levelup = sysfont.render(LEVEL_UP_MESSAGE, True, (255, 255, 0))
+    sysfont = pygame.font.SysFont(None, FONT_SIZE_MIDDLE)
+    scorefont = pygame.font.SysFont(None, FONT_SIZE_SMALL)
+    msg_clear = sysfont.render(CLEAR_MESSAGE, True, COLOR_CYAN)
+    msg_over = sysfont.render(GAMEOVER_MESSAGE, True, COLOR_CYAN)
+    msg_title = sysfont.render(TITLE_MESSAGE, True, COLOR_YELLOW)
+    msg_start = scorefont.render(START_MESSAGE, True, COLOR_WHITE)
+    msg_levelup = sysfont.render(LEVEL_UP_MESSAGE, True, COLOR_YELLOW)
 
     # ゲームの初期状態設定
     game_state = GAME_STATE_TITLE
@@ -118,7 +130,7 @@ def main():
         # ------------------------------------------------
         if game_state == GAME_STATE_TITLE:
             # 画面クリア
-            surface.fill((0, 0, 0))
+            surface.fill(COLOR_BLACK)
 
             # タイトル描画
             title_rect = msg_title.get_rect()
@@ -148,7 +160,6 @@ def main():
 
                 # 自機・ショット・敵の生成
                 ship = Ship()
-                # 【変更前】shot = Shot()  # 1発のみ管理
                 # 【変更】shots をリストで管理（3点バースト対応）
                 shots = []
                 burst_remaining = 0
@@ -167,14 +178,12 @@ def main():
                         rect = Rect(xpos * 50 + 100, ypos * 50 + 50, 24, 24)
                         alien = Alien(rect, offset, (4 - ypos) * 10)
                         aliens.append(alien)
-                # aliens.append(Alien(Rect(300, 150, 24, 24), 96, 100)) # デバッグ用：1体のみ
 
                 # 【変更】エイリアンのビーム初期化（4→8に増加で弾幕強化）
                 for _ in range(8):
                     beams.append(Beam())
 
-                # 状態２へ移行
-                game_state = "PLAY"
+                game_state = GAME_STATE_PLAY
 
         # ------------------------------------------------
         # 状態2: ゲームプレイ中
@@ -335,7 +344,6 @@ def main():
                             rect = Rect(xpos * 50 + 100, ypos * 50 + 50, 24, 24)
                             alien = Alien(rect, offset, (4 - ypos) * 10)
                             aliens.append(alien)
-                    # aliens.append(Alien(Rect(300, 150, 24, 24), 96, 100)) # デバッグ用：1体のみ
                     # 【変更】敵ビーム8発に増加
                     for _ in range(8):
                         beams.append(Beam())
@@ -343,9 +351,8 @@ def main():
                     levelup_timer = 12  # レベルアップ表示用タイマーセット
 
             # ======= 描画処理 =======
-            surface.fill((0, 0, 0))
+            surface.fill(COLOR_BLACK)
             ship.draw()
-            # 【変更前】shot.draw()  # 1発のみ描画
             # 【変更】全てのショットを描画（リスト対応）
             for s in shots:
                 s.draw()
@@ -407,7 +414,7 @@ def main():
         # 状態3: ゲームオーバー / クリア
         # ------------------------------------------------
         elif game_state in (GAME_STATE_GAMEOVER, GAME_STATE_CLEAR):
-            surface.fill((0, 0, 0))
+            surface.fill(COLOR_BLACK)
             if ship:
                 ship.draw()
             for alien in aliens:
@@ -417,12 +424,12 @@ def main():
 
             # スコア描画
             score_str = str(score).zfill(5)
-            score_image = scorefont.render(score_str, True, (0, 255, 0))
+            score_image = scorefont.render(score_str, True, COLOR_GREEN)
             surface.blit(score_image, (500, 10))
 
             # レベルの描画
             level_str = f"Level {level}"
-            level_image = scorefont.render(level_str, True, (0, 255, 0))
+            level_image = scorefont.render(level_str, True, COLOR_GREEN)
             surface.blit(level_image, (25, 10))
 
             # メッセージ表示
