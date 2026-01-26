@@ -15,9 +15,9 @@ pygame.init()
 pygame.key.set_repeat(5, 5)
 surface = pygame.display.set_mode(WINDOW_SIZE)
 clock = pygame.time.Clock()
-pygame.display.set_caption('*** インベーダー ***')
+pygame.display.set_caption('*** Invader Game ***')
 
-# Ａ－１６drawableから）Drawableクラスのクラス変数に、ゲームの画面情報を設定する
+# Drawableクラスのクラス変数に、ゲームの画面情報を設定する
 Drawable.set_window_info(surface, WINDOW_SIZE)
 
 # ======= メイン処理 =======
@@ -34,8 +34,7 @@ def main():
     # ゲームの状態 (TITLE, PLAY, GAMEOVER, CLEAR)
     game_state = 'TITLE'
     
-    # ゲーム内で使用する変数（初期値はNoneや空リストにしておく）
-    # 多分使わないけど不安だから残しておく
+    # ゲーム内で使用する変数
     keymap = []             # キーマップ
     is_gameover = False     # ゲームオーバーフラグ
     is_left_move = True     # 左移動フラグ
@@ -149,17 +148,17 @@ def main():
         # 状態2: ゲームプレイ中
         # ------------------------------------------------
         elif game_state == 'PLAY':
-            # Ｂ－２７drawableから）自機の移動距離は毎回０に初期化する
+            # 自機の移動距離は毎回０に初期化する
             ship_move_x = 0
             
-            # Ｂ－３２）左右キーの場合、自機の移動距離を設定
+            # 左右キーの場合、自機の移動距離を設定
             if K_LEFT in keymap or K_a in keymap:
                 ship_move_x = -8
             if K_RIGHT in keymap or K_d in keymap:
                 ship_move_x = 8
             
             # ===== 緊急回避（ダッシュ）処理 =====
-            # 【追加】ダッシュクールダウンを減らす
+            # ダッシュクールダウンを減らす
             if dash_cooldown > 0:
                 dash_cooldown -= 1
             
@@ -211,11 +210,8 @@ def main():
                 else:
                     burst_interval = BURST_DELAY  # 次の弾までの間隔
 
-            # Ｂ－３３）ゲームオーバーでない場合
             if not is_gameover:
-                # Ｂ－３４）ループカウンタを１増やす
                 loop_count += 1
-                # Ｂ－３５最後）自機を移動する
                 ship.move(ship_move_x, 0)
                 
                 # 【変更前】1発のみの移動処理
@@ -223,27 +219,27 @@ def main():
                 # if shot.rect.bottom < 0:
                 #     shot.on_draw = False
                 
-                # 【変更】Ｄ－５３）自機ショットを移動する（リスト内の全弾を処理）
+                # 【変更】自機ショットを移動する（リスト内の全弾を処理）
                 for s in shots[:]:
                     s.move(0, -25)
-                    # Ｄ－５４）自機ショットが画面外に行った場合、リストから削除
+                    # 自機ショットが画面外に行った場合、リストから削除
                     if s.rect.bottom < 0:
                         shots.remove(s)
 
                 # ======= エイリアン軍団を移動する =======
-                # Ｃ－４４）ループカウンタが、移動するタイミングの場合
+                # ループカウンタが、移動するタイミングの場合
                 if loop_count % move_interval == 0:
-                    # Ｆ－７０）エイリアンの範囲取得処理
+                    # エイリアンの範囲取得処理
                     if len(aliens) > 0:
                         area = aliens[0].rect.copy()
                         for alien in aliens:
                             area.union_ip(alien.rect)
                         
-                        # Ｆ－７３）左移動フラグに応じて、移動方向（左右移動距離）を決める
+                        # 左移動フラグに応じて、移動方向（左右移動距離）を決める
                         move_x = -5 * level * 0.75 if is_left_move else 5 * level * 0.75
                         move_y = 0
                                         
-                        # Ｆ－７４）「エリア」が左端または右端に当達して、下段移動していない場合
+                        # 「エリア」が左端または右端に当達して、下段移動していない場合
                         if (area.left < 10 or area.right > 590) and not is_down_move:
                             is_left_move = not is_left_move
                             move_x, move_y = 0, 24
@@ -252,38 +248,38 @@ def main():
                         else:
                             is_down_move = False
                         
-                        # Ｆ－８０）設定した移動距離に応じて、エイリアンを移動する
+                        # 設定した移動距離に応じて、エイリアンを移動する
                         for alien in aliens:
                             alien.move(move_x, move_y)
                             
-                        # Ｆ－８１最後）エイリアンが最下段まで来たら、ゲームオーバー
+                        # エイリアンが最下段まで来たら、ゲームオーバー
                         if area.bottom > 550:
                             is_gameover = True
                             game_state = 'GAMEOVER' # 状態3へ
 
-                # Ｇ－８６）敵ビームを移動
+                # 敵ビームを移動
                 for beam in beams:
-                    # Ｇ－８７）敵ビームが画面上にある場合
+                    # 敵ビームが画面上にある場合
                     if beam.on_draw:
-                        # Ｇ－８８）下方向に移動する
+                        # 下方向に移動する
                         beam.move(0, 10 + level * 2)
-                        # Ｇ－８９）画面の一番下に到達した場合
+                        # 画面の一番下に到達した場合
                         if beam.rect.top > 600:
-                            # Ｇ－９０）次の発射タイミングを、ループカウンタ＋αにする
+                            # 次の発射タイミングを、ループカウンタ＋αにする
                             beam.fire_timing = loop_count + randint(20, 200)
-                            # Ｇ－９１）敵ビームの描画フラグをFalseにする
+                            # 敵ビームの描画フラグをFalseにする
                             beam.on_draw = False
                     
-                    # Ｇ－９２）ビームが画面上にない場合で、発射タイミング以降となった場合
+                    # ビームが画面上にない場合で、発射タイミング以降となった場合
                     elif beam.fire_timing < loop_count and len(aliens) > 0:
-                        # Ｇ－９３）現在のエイリアン軍団からランダムで１体を選ぶ
+                        # 現在のエイリアン軍団からランダムで１体を選ぶ
                         t_alien = aliens[randint(0, len(aliens) - 1)]
-                        # Ｇ－９４）ビームの位置をそのエイリアンに合わせる
+                        # ビームの位置をそのエイリアンに合わせる
                         beam.rect.center = t_alien.rect.center                    
-                        # Ｇ－９５）敵ビームの描画フラグをTrueにする
+                        # 敵ビームの描画フラグをTrueにする
                         beam.on_draw = True
                     
-                    # Ｇ－９６）自機の四角が敵ビームの中心と重なった場合
+                    # 自機の四角が敵ビームの中心と重なった場合
                     if ship.rect.collidepoint(beam.rect.center):
                         is_gameover = True
                         game_state = 'GAMEOVER'
@@ -299,7 +295,7 @@ def main():
                     #             temp_aliens.append(alien)
                     #     aliens = temp_aliens
                     
-                    # 【変更】Ｅ－５７）ショットとエイリアンの衝突判定（リスト対応）
+                    # 【変更】ショットとエイリアンの衝突判定（リスト対応）
                     for s in shots[:]:
                         hit = False
                         temp_aliens = []
