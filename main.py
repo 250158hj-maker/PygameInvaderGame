@@ -17,6 +17,11 @@ from drawable import Drawable, Ship, Beam, Shot, Alien
 
 WINDOW_WIDTH = 600
 WINDOW_HEIGHT = 600
+
+SCREEN_LEFT_BOUNDARY = 10
+SCREEN_RIGHT_BOUNDARY = 590
+ARIAN_GAMEOVER_LINE = 550
+
 # ウィンドウサイズ
 WINDOW_SIZE = (WINDOW_WIDTH, WINDOW_WIDTH)
 
@@ -31,32 +36,6 @@ COLOR_GREEN = (0, 255, 0)
 COLOR_GRAY = (60, 60, 60)
 COLOR_ORANGE = (255, 165, 0)
 
-# ゲームメッセージ文字列
-CLEAR_MESSAGE = "CLEAR!!"
-GAMEOVER_MESSAGE = "GAME OVER!!"
-TITLE_MESSAGE = "INVADER GAME"
-START_MESSAGE = "PRESS SPACE TO START"
-LEVEL_UP_MESSAGE = "LEVEL UP!!"
-DASH_MESSAGE = "DASH!!"
-
-
-# ゲーム状態
-GAME_STATE_TITLE = "TITLE"
-GAME_STATE_PLAY = "PLAY"
-GAME_STATE_GAMEOVER = "GAMEOVER"
-GAME_STATE_CLEAR = "CLEAR"
-
-
-# 3点バースト
-BURST_COUNT = 3  # 1回のバーストで発射する弾数
-BURST_DELAY = 3  # バースト間の発射間隔（フレーム数）
-BURST_COOLDOWN = 15  # 次のバースト開始までのクールダウン
-# 緊急回避機能
-DASH_SPEED = 40  # ダッシュ時の移動速度
-DASH_DURATION = 3  # ダッシュの持続フレーム数
-DASH_COOLDOWN_TIME = 30  # ダッシュのクールダウン（フレーム数）
-
-
 pygame.init()
 # キー押下判定を 5ミリ秒単位にする
 pygame.key.set_repeat(5, 5)
@@ -67,21 +46,61 @@ pygame.display.set_caption(GAME_CAPTION)
 # Drawableクラスのクラス変数に、ゲームの画面情報を設定する
 Drawable.set_window_info(surface, WINDOW_SIZE)
 
+# ゲームメッセージ文字列
+CLEAR_MESSAGE = "CLEAR!!"
+GAMEOVER_MESSAGE = "GAME OVER!!"
+TITLE_MESSAGE = "INVADER GAME"
+START_MESSAGE = "PRESS SPACE TO START"
+RETRY_MESSAGE = "PRESS SPACE TO RETRY"
+LEVEL_UP_MESSAGE = "LEVEL UP!!"
+DASH_MESSAGE = "DASH!!"
 
 # フォント
 FONT_SIZE_LARGE = 72
 FONT_SIZE_SMALL = 36
-
-SYSTEM_LARGE_FONT = pygame.font.SysFont(None, FONT_SIZE_LARGE)
-SYSTEM_SMALL_FONT = pygame.font.SysFont(None, FONT_SIZE_SMALL)
+LARGE_FONT = pygame.font.SysFont(None, FONT_SIZE_LARGE)
+SMALL_FONT = pygame.font.SysFont(None, FONT_SIZE_SMALL)
 
 # 描画用画像（文字列を画像に変換）
-CLEAR_MESSAGE_SURFACE = SYSTEM_LARGE_FONT.render(CLEAR_MESSAGE, True, COLOR_CYAN)
-GAMEOVER_MESSAGE_SURFACE = SYSTEM_LARGE_FONT.render(GAMEOVER_MESSAGE, True, COLOR_CYAN)
-TITLE_MESSAGE_SURFACE = SYSTEM_LARGE_FONT.render(TITLE_MESSAGE, True, COLOR_YELLOW)
-START_MESSAGE_SURFACE = SYSTEM_SMALL_FONT.render(START_MESSAGE, True, COLOR_WHITE)
-LEVEL_UP_MESSAGE_SURFACE = SYSTEM_LARGE_FONT.render(LEVEL_UP_MESSAGE, True, COLOR_YELLOW)
-DASH_MESSAGE_SURFACE = SYSTEM_SMALL_FONT.render(DASH_MESSAGE, True, COLOR_YELLOW)
+CLEAR_MESSAGE_SURFACE = LARGE_FONT.render(CLEAR_MESSAGE, True, COLOR_CYAN)
+GAMEOVER_MESSAGE_SURFACE = LARGE_FONT.render(GAMEOVER_MESSAGE, True, COLOR_CYAN)
+TITLE_MESSAGE_SURFACE = LARGE_FONT.render(TITLE_MESSAGE, True, COLOR_YELLOW)
+START_MESSAGE_SURFACE = SMALL_FONT.render(START_MESSAGE, True, COLOR_WHITE)
+RETRY_MESSAGE_SURFACE = SMALL_FONT.render(RETRY_MESSAGE, True, COLOR_WHITE)
+LEVEL_UP_MESSAGE_SURFACE = LARGE_FONT.render(LEVEL_UP_MESSAGE, True, COLOR_YELLOW)
+DASH_MESSAGE_SURFACE = SMALL_FONT.render(DASH_MESSAGE, True, COLOR_YELLOW)
+
+# ゲーム状態
+GAME_STATE_TITLE = "TITLE"
+GAME_STATE_PLAY = "PLAY"
+GAME_STATE_GAMEOVER = "GAMEOVER"
+GAME_STATE_CLEAR = "CLEAR"
+
+# -----ゲーム内処理（ゲーム性に直結する定数）-----
+ALIAN_ROW = 4
+ALIAN_COL = 10
+ALIAN_TOTAL_BEAM = 8
+ALIAN_BASE_SPEED = 5
+ALIAN_MULTIPLIER_SPEED = 0.75
+ALIAN_DOWN_MOVE = 24
+ALIAN_BEAM_BASE_SPEED = 10
+ALIAN_BEAM_MULTIPLIER = 2
+
+
+SHIP_MOVE_SPEED = 8
+SHOT_MOVE_SPEED = 25
+
+
+# 3点バースト
+BURST_COUNT = 3  # 1回のバーストで発射する弾数
+BURST_DELAY = 3  # バースト間の発射間隔（フレーム数）
+BURST_COOLDOWN = 15  # 次のバースト開始までのクールダウン
+# 緊急回避機能
+DASH_GUAGE_WIDTH = 100
+DASH_GUAGE_HEIGHT = 10
+DASH_SPEED = 40  # ダッシュ時の移動速度
+DASH_DURATION = 3  # ダッシュの持続フレーム数
+DASH_COOLDOWN_TIME = 30  # ダッシュのクールダウン（フレーム数）
 
 
 # ======= メイン処理 =======
@@ -176,9 +195,9 @@ def main():
                 dash_timer = 0
 
                 # エイリアンの初期配置
-                for ypos in range(4):
+                for ypos in range(ALIAN_ROW):
                     offset = 96 if ypos < 2 else 144
-                    for xpos in range(10):
+                    for xpos in range(ALIAN_COL):
                         rect = Rect(xpos * 50 + 100, ypos * 50 + 50, 24, 24)
                         alien = Alien(rect, offset, (4 - ypos) * 10)
                         aliens.append(alien)
@@ -198,9 +217,9 @@ def main():
 
             # 左右キーの場合、自機の移動距離を設定
             if K_LEFT in keymap or K_a in keymap:
-                ship_move_x = -8
+                ship_move_x = -SHIP_MOVE_SPEED
             if K_RIGHT in keymap or K_d in keymap:
-                ship_move_x = 8
+                ship_move_x = SHIP_MOVE_SPEED
 
             # ===== 緊急回避（ダッシュ）処理 =====
             # ダッシュクールダウンを減らす
@@ -256,7 +275,7 @@ def main():
 
                 # 【変更】自機ショットを移動する（リスト内の全弾を処理）
                 for s in shots[:]:
-                    s.move(0, -25)
+                    s.move(0, -SHOT_MOVE_SPEED)
                     # 自機ショットが画面外に行った場合、リストから削除
                     if s.rect.bottom < 0:
                         shots.remove(s)
@@ -271,13 +290,20 @@ def main():
                             area.union_ip(alien.rect)
 
                         # 左移動フラグに応じて、移動方向（左右移動距離）を決める
-                        move_x = -5 * level * 0.75 if is_left_move else 5 * level * 0.75
+                        move_x = (
+                            -level * ALIAN_BASE_SPEED * ALIAN_MULTIPLIER_SPEED
+                            if is_left_move
+                            else level * ALIAN_BASE_SPEED * ALIAN_MULTIPLIER_SPEED
+                        )
                         move_y = 0
 
                         # 「エリア」が左端または右端に当達して、下段移動していない場合
-                        if (area.left < 10 or area.right > 590) and not is_down_move:
+                        if (
+                            area.left < SCREEN_LEFT_BOUNDARY
+                            or area.right > SCREEN_RIGHT_BOUNDARY
+                        ) and not is_down_move:
                             is_left_move = not is_left_move
-                            move_x, move_y = 0, 24
+                            move_x, move_y = 0, ALIAN_DOWN_MOVE
                             move_interval = max(1, move_interval - 2)
                             is_down_move = True
                         else:
@@ -288,7 +314,7 @@ def main():
                             alien.move(move_x, move_y)
 
                         # エイリアンが最下段まで来たら、ゲームオーバー
-                        if area.bottom > 550:
+                        if area.bottom > ARIAN_GAMEOVER_LINE:
                             is_gameover = True
                             game_state = GAME_STATE_GAMEOVER
 
@@ -297,7 +323,9 @@ def main():
                     # 敵ビームが画面上にある場合
                     if beam.on_draw:
                         # 下方向に移動する
-                        beam.move(0, 10 + level * 2)
+                        beam.move(
+                            0, ALIAN_BEAM_BASE_SPEED + level * ALIAN_BEAM_MULTIPLIER
+                        )
                         # 画面の一番下に到達した場合
                         if beam.rect.top > 600:
                             # 次の発射タイミングを、ループカウンタ＋αにする
@@ -342,14 +370,14 @@ def main():
                     is_down_move = False
                     aliens = []
                     beams = []
-                    for ypos in range(4):
+                    for ypos in range(ALIAN_ROW):
                         offset = 96 if ypos < 2 else 144
-                        for xpos in range(10):
+                        for xpos in range(ALIAN_COL):
                             rect = Rect(xpos * 50 + 100, ypos * 50 + 50, 24, 24)
                             alien = Alien(rect, offset, (4 - ypos) * 10)
                             aliens.append(alien)
-                    # 【変更】敵ビーム8発に増加
-                    for _ in range(8):
+                    # 敵ビームを8発生成
+                    for _ in range(ALIAN_TOTAL_BEAM):
                         beams.append(Beam())
                     level += 1
                     levelup_timer = 12  # レベルアップ表示用タイマーセット
@@ -367,38 +395,36 @@ def main():
 
             # スコアの描画
             score_str = str(score).zfill(5)
-            score_image = SYSTEM_SMALL_FONT.render(score_str, True, COLOR_GREEN)
+            score_image = SMALL_FONT.render(score_str, True, COLOR_GREEN)
             surface.blit(score_image, (500, 10))
 
             # レベルの描画
             level_str = f"Level {level}"
-            level_image = SYSTEM_SMALL_FONT.render(level_str, True, COLOR_GREEN)
+            level_image = SMALL_FONT.render(level_str, True, COLOR_GREEN)
             surface.blit(level_image, (25, 10))
 
             # 【追加】ダッシュゲージの描画（画面下部）
-            dash_gauge_width = 100
-            dash_gauge_height = 10
-            dash_gauge_x = WINDOW_WIDTH // 2 - dash_gauge_width // 2
+            dash_gauge_x = WINDOW_WIDTH // 2 - DASH_GUAGE_WIDTH // 2
             dash_gauge_y = WINDOW_HEIGHT - 20
-            # ゲージ背景（グレー）
+            # ゲージ背景
             pygame.draw.rect(
                 surface,
                 COLOR_GRAY,
-                (dash_gauge_x, dash_gauge_y, dash_gauge_width, dash_gauge_height),
+                (dash_gauge_x, dash_gauge_y, DASH_GUAGE_WIDTH, DASH_GUAGE_HEIGHT),
             )
             # ゲージ本体（クールダウン残量に応じて増減） 本体の上に重ねて描画
             if dash_cooldown == 0:
                 gauge_color = COLOR_CYAN
-                gauge_fill = dash_gauge_width
+                gauge_fill = DASH_GUAGE_WIDTH
             else:
                 gauge_color = COLOR_ORANGE
                 gauge_fill = int(
-                    dash_gauge_width * (1 - dash_cooldown / DASH_COOLDOWN_TIME)
+                    DASH_GUAGE_WIDTH * (1 - dash_cooldown / DASH_COOLDOWN_TIME)
                 )
             pygame.draw.rect(
                 surface,
                 gauge_color,
-                (dash_gauge_x, dash_gauge_y, gauge_fill, dash_gauge_height),
+                (dash_gauge_x, dash_gauge_y, gauge_fill, DASH_GUAGE_HEIGHT),
             )
             # ダッシュ中は点滅表示
             if is_dashing and loop_count % 2 == 0:
@@ -427,12 +453,12 @@ def main():
 
             # スコア描画
             score_str = str(score).zfill(5)
-            score_image = SYSTEM_SMALL_FONT.render(score_str, True, COLOR_GREEN)
+            score_image = SMALL_FONT.render(score_str, True, COLOR_GREEN)
             surface.blit(score_image, (500, 10))
 
             # レベルの描画
             level_str = f"Level {level}"
-            level_image = SYSTEM_SMALL_FONT.render(level_str, True, COLOR_GREEN)
+            level_image = SMALL_FONT.render(level_str, True, COLOR_GREEN)
             surface.blit(level_image, (25, 10))
 
             # メッセージ表示
@@ -446,7 +472,7 @@ def main():
                 surface.blit(GAMEOVER_MESSAGE_SURFACE, msg_rect.topleft)
 
             # リトライメッセージ
-            retry_msg = START_MESSAGE_SURFACE
+            retry_msg = RETRY_MESSAGE_SURFACE
             retry_rect = retry_msg.get_rect()
             retry_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 80)
             if (pygame.time.get_ticks() // 500) % 2 == 0:
