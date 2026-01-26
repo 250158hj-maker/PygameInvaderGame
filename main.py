@@ -15,16 +15,15 @@ from pygame.locals import (
 )
 from drawable import Drawable, Ship, Beam, Shot, Alien
 
+# ウィンドウ
 WINDOW_WIDTH = 600
 WINDOW_HEIGHT = 600
-
 SCREEN_LEFT_BOUNDARY = 10
 SCREEN_RIGHT_BOUNDARY = 590
 ALIEN_GAMEOVER_LINE = 550
-
-# ウィンドウサイズ
 WINDOW_SIZE = (WINDOW_WIDTH, WINDOW_WIDTH)
 
+# キャプション
 GAME_CAPTION = "*** Invader Game ***"
 
 # 色
@@ -35,6 +34,7 @@ COLOR_YELLOW = (255, 255, 0)
 COLOR_GREEN = (0, 255, 0)
 COLOR_GRAY = (60, 60, 60)
 COLOR_ORANGE = (255, 165, 0)
+
 
 pygame.init()
 # キー押下判定を 5ミリ秒単位にする
