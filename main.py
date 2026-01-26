@@ -347,7 +347,7 @@ def main():
                         is_gameover = True
                         game_state = GAME_STATE_GAMEOVER
 
-                    # 【変更】ショットとエイリアンの衝突判定（リスト対応）
+                    # ショットとエイリアンの衝突判定（リスト対応）
                     for s in shots[:]:
                         hit = False
                         temp_aliens = []
@@ -385,7 +385,7 @@ def main():
             # ======= 描画処理 =======
             surface.fill(COLOR_BLACK)
             ship.draw()
-            # 【変更】全てのショットを描画（リスト対応）
+            # 全てのショットを描画（リスト対応）
             for s in shots:
                 s.draw()
             for alien in aliens:
@@ -403,7 +403,7 @@ def main():
             level_image = SMALL_FONT.render(level_str, True, COLOR_GREEN)
             surface.blit(level_image, (25, 10))
 
-            # 【追加】ダッシュゲージの描画（画面下部）
+            # ダッシュゲージの描画（画面下部）
             dash_gauge_x = WINDOW_WIDTH // 2 - DASH_GUAGE_WIDTH // 2
             dash_gauge_y = WINDOW_HEIGHT - 20
             # ゲージ背景
@@ -478,7 +478,7 @@ def main():
             if (pygame.time.get_ticks() // 500) % 2 == 0:
                 surface.blit(retry_msg, retry_rect.topleft)
 
-            # スペースキーでタイトルに戻る（または即リスタート）
+            # スペースキーでリスタート
             if K_SPACE in keymap:
                 game_state = GAME_STATE_TITLE
                 # キー入力を一度クリアしておかないと、タイトル画面で即スタートしてしまうのを防ぐ
