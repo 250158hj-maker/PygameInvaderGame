@@ -80,16 +80,16 @@ GAME_STATE_CLEAR = "CLEAR"
 # エイリアン配置
 ALIEN_ROW = 4
 ALIEN_COL = 10
-ALIEN_SPRITE_OFFSET_TOP = 96      # 上段2行の画像オフセット
+ALIEN_SPRITE_OFFSET_TOP = 96  # 上段2行の画像オフセット
 ALIEN_SPRITE_OFFSET_BOTTOM = 144  # 下段2行の画像オフセット
 ALIEN_SPRITE_SIZE = 24
 ALIEN_SPACING_X = 50
 ALIEN_SPACING_Y = 50
 ALIEN_START_X = 100
 ALIEN_START_Y = 50
-ALIEN_TOP_ROWS = 2                # 上段の行数
-ALIEN_SCORE_BASE = 10             # スコア計算用
-ALIEN_SCORE_ROW_MULTIPLIER = 4    # スコア計算用
+ALIEN_TOP_ROWS = 2  # 上段の行数
+ALIEN_SCORE_BASE = 10  # スコア計算用
+ALIEN_SCORE_ROW_MULTIPLIER = 4  # スコア計算用
 
 # エイリアン移動
 ALIEN_BASE_SPEED = 5
@@ -142,33 +142,8 @@ DASH_COOLDOWN_TIME = 30  # ダッシュのクールダウン（フレーム数�
 def main():
     # ゲームの初期状態設定
     game_state = GAME_STATE_TITLE
-
-    # ゲーム内で使用する変数
     keymap = []  # キーマップ
-    is_gameover = False  # ゲームオーバーフラグ
-    is_left_move = True  # 左移動フラグ
-    is_down_move = False  # 下移動フラグ
-    move_interval = 20  # インベーダーの移動間隔
-    loop_count = 0  # ループカウンタ
-    score = 0  # スコア
-    level = 1  # レベル
-    aliens = []  # インベーダーのリスト
-    beams = []  # ビームのリスト
-    ship = None  # 自機
-    levelup_timer = 0  # レベルアップ表示用タイマー
-
-    # ===== 3点バースト用の変数 =====
-    # 【変更前】shot = None  # 自機ショット（1発のみ）
-    shots = []  # 自機ショットリスト（複数弾を管理）
-    burst_remaining = 0  # バーストの残り発射数（0なら発射可能状態）
-    burst_interval = 0  # バースト間の発射間隔タイマー
-
-    # ===== 緊急回避（ダッシュ）用の変数 =====
-    dash_cooldown = 0  # ダッシュのクールダウンタイマー
-    is_dashing = False  # ダッシュ中フラグ
-    dash_direction = 0  # ダッシュ方向（-1:左, 1:右）
-    dash_timer = 0  # ダッシュ持続タイマー
-
+    
     # ======= メインループ =======
     while True:
         # イベント処理（全状態共通）
@@ -215,6 +190,7 @@ def main():
                 score = 0
                 aliens = []
                 beams = []
+                levelup_timer = 0  # レベルアップ表示用タイマー
 
                 # 自機・ショット・敵の生成
                 ship = Ship()
@@ -231,12 +207,18 @@ def main():
 
                 # エイリアンの初期配置
                 for ypos in range(ALIEN_ROW):
-                    offset = ALIEN_SPRITE_OFFSET_TOP if ypos < ALIEN_TOP_ROWS else ALIEN_SPRITE_OFFSET_BOTTOM
+                    offset = (
+                        ALIEN_SPRITE_OFFSET_TOP
+                        if ypos < ALIEN_TOP_ROWS
+                        else ALIEN_SPRITE_OFFSET_BOTTOM
+                    )
                     for xpos in range(ALIEN_COL):
                         x = xpos * ALIEN_SPACING_X + ALIEN_START_X
                         y = ypos * ALIEN_SPACING_Y + ALIEN_START_Y
                         rect = Rect(x, y, ALIEN_SPRITE_SIZE, ALIEN_SPRITE_SIZE)
-                        score_value = (ALIEN_SCORE_ROW_MULTIPLIER - ypos) * ALIEN_SCORE_BASE
+                        score_value = (
+                            ALIEN_SCORE_ROW_MULTIPLIER - ypos
+                        ) * ALIEN_SCORE_BASE
                         alien = Alien(rect, offset, score_value)
                         aliens.append(alien)
 
@@ -367,7 +349,9 @@ def main():
                         # 画面の一番下に到達した場合
                         if beam.rect.top > WINDOW_HEIGHT:
                             # 次の発射タイミングを、ループカウンタ＋αにする
-                            beam.fire_timing = loop_count + randint(ALIEN_BEAM_FIRE_DELAY_MIN, ALIEN_BEAM_FIRE_DELAY_MAX)
+                            beam.fire_timing = loop_count + randint(
+                                ALIEN_BEAM_FIRE_DELAY_MIN, ALIEN_BEAM_FIRE_DELAY_MAX
+                            )
                             # 敵ビームの描画フラグをFalseにする
                             beam.on_draw = False
 
@@ -405,19 +389,26 @@ def main():
                 if len(aliens) == 0:
                     move_interval = max(
                         ALIEN_MOVE_INTERVAL_MIN,
-                        ALIEN_MOVE_INTERVAL_BASE - (level - 1) * ALIEN_MOVE_INTERVAL_DECREASE
+                        ALIEN_MOVE_INTERVAL_BASE
+                        - (level - 1) * ALIEN_MOVE_INTERVAL_DECREASE,
                     )
                     is_left_move = True
                     is_down_move = False
                     aliens = []
                     beams = []
                     for ypos in range(ALIEN_ROW):
-                        offset = ALIEN_SPRITE_OFFSET_TOP if ypos < ALIEN_TOP_ROWS else ALIEN_SPRITE_OFFSET_BOTTOM
+                        offset = (
+                            ALIEN_SPRITE_OFFSET_TOP
+                            if ypos < ALIEN_TOP_ROWS
+                            else ALIEN_SPRITE_OFFSET_BOTTOM
+                        )
                         for xpos in range(ALIEN_COL):
                             x = xpos * ALIEN_SPACING_X + ALIEN_START_X
                             y = ypos * ALIEN_SPACING_Y + ALIEN_START_Y
                             rect = Rect(x, y, ALIEN_SPRITE_SIZE, ALIEN_SPRITE_SIZE)
-                            score_value = (ALIEN_SCORE_ROW_MULTIPLIER - ypos) * ALIEN_SCORE_BASE
+                            score_value = (
+                                ALIEN_SCORE_ROW_MULTIPLIER - ypos
+                            ) * ALIEN_SCORE_BASE
                             alien = Alien(rect, offset, score_value)
                             aliens.append(alien)
                     # 敵ビーム生成
@@ -473,7 +464,10 @@ def main():
             # ダッシュ中は点滅表示
             if is_dashing and loop_count % 2 == 0:
                 dash_rect = DASH_MESSAGE_SURFACE.get_rect()
-                dash_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT - DASH_TEXT_OFFSET_Y)
+                dash_rect.center = (
+                    WINDOW_WIDTH // 2,
+                    WINDOW_HEIGHT - DASH_TEXT_OFFSET_Y,
+                )
                 surface.blit(DASH_MESSAGE_SURFACE, dash_rect.topleft)
 
             # レベルアップ表示
@@ -518,7 +512,10 @@ def main():
             # リトライメッセージ
             retry_msg = RETRY_MESSAGE_SURFACE
             retry_rect = retry_msg.get_rect()
-            retry_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + RETRY_MESSAGE_OFFSET_Y)
+            retry_rect.center = (
+                WINDOW_WIDTH // 2,
+                WINDOW_HEIGHT // 2 + RETRY_MESSAGE_OFFSET_Y,
+            )
             if (pygame.time.get_ticks() // MESSAGE_BLINK_INTERVAL) % 2 == 0:
                 surface.blit(retry_msg, retry_rect.topleft)
 
