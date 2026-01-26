@@ -20,7 +20,7 @@ WINDOW_HEIGHT = 600
 
 SCREEN_LEFT_BOUNDARY = 10
 SCREEN_RIGHT_BOUNDARY = 590
-ARIAN_GAMEOVER_LINE = 550
+ALIEN_GAMEOVER_LINE = 550
 
 # ウィンドウサイズ
 WINDOW_SIZE = (WINDOW_WIDTH, WINDOW_WIDTH)
@@ -77,19 +77,54 @@ GAME_STATE_GAMEOVER = "GAMEOVER"
 GAME_STATE_CLEAR = "CLEAR"
 
 # -----ゲーム内処理（ゲーム性に直結する定数）-----
-ALIAN_ROW = 4
-ALIAN_COL = 10
-ALIAN_TOTAL_BEAM = 8
-ALIAN_BASE_SPEED = 5
-ALIAN_MULTIPLIER_SPEED = 0.75
-ALIAN_DOWN_MOVE = 24
-ALIAN_BEAM_BASE_SPEED = 10
-ALIAN_BEAM_MULTIPLIER = 2
+# エイリアン配置
+ALIEN_ROW = 4
+ALIEN_COL = 10
+ALIEN_SPRITE_OFFSET_TOP = 96      # 上段2行の画像オフセット
+ALIEN_SPRITE_OFFSET_BOTTOM = 144  # 下段2行の画像オフセット
+ALIEN_SPRITE_SIZE = 24
+ALIEN_SPACING_X = 50
+ALIEN_SPACING_Y = 50
+ALIEN_START_X = 100
+ALIEN_START_Y = 50
+ALIEN_TOP_ROWS = 2                # 上段の行数
+ALIEN_SCORE_BASE = 10             # スコア計算用
+ALIEN_SCORE_ROW_MULTIPLIER = 4    # スコア計算用
+
+# エイリアン移動
+ALIEN_BASE_SPEED = 5
+ALIEN_MULTIPLIER_SPEED = 0.75
+ALIEN_DOWN_MOVE = 24
+ALIEN_MOVE_INTERVAL_INITIAL = 20
+ALIEN_MOVE_INTERVAL_MIN = 10
+ALIEN_MOVE_INTERVAL_DECREASE = 2
+ALIEN_MOVE_INTERVAL_BASE = 20
+
+# エイリアンビーム
+ALIEN_TOTAL_BEAM = 8
+ALIEN_BEAM_BASE_SPEED = 10
+ALIEN_BEAM_MULTIPLIER = 2
+ALIEN_BEAM_FIRE_DELAY_MIN = 20
+ALIEN_BEAM_FIRE_DELAY_MAX = 200
 
 
+# 自機とショット
 SHIP_MOVE_SPEED = 8
 SHOT_MOVE_SPEED = 25
 
+# UI配置
+SCORE_POSITION_X = 500
+SCORE_POSITION_Y = 10
+LEVEL_POSITION_X = 25
+LEVEL_POSITION_Y = 10
+DASH_GAUGE_OFFSET_Y = 20
+DASH_TEXT_OFFSET_Y = 30
+RETRY_MESSAGE_OFFSET_Y = 80
+MESSAGE_BLINK_INTERVAL = 500  # ミリ秒
+LEVELUP_DISPLAY_FRAMES = 12
+
+# ゲーム設定
+GAME_FPS = 20
 
 # 3点バースト
 BURST_COUNT = 3  # 1回のバーストで発射する弾数
@@ -163,8 +198,8 @@ def main():
             # スタートメッセージ描画
             start_rect = START_MESSAGE_SURFACE.get_rect()
             start_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 50)
-            # 点滅演出（ループカウンタを利用）
-            if (pygame.time.get_ticks() // 500) % 2 == 0:
+            # 点滅演出
+            if (pygame.time.get_ticks() // MESSAGE_BLINK_INTERVAL) % 2 == 0:
                 surface.blit(START_MESSAGE_SURFACE, start_rect.topleft)
 
             # スペースキーでゲーム開始（初期化処理）
@@ -174,7 +209,7 @@ def main():
                 is_gameover = False
                 is_left_move = True
                 is_down_move = False
-                move_interval = 20
+                move_interval = ALIEN_MOVE_INTERVAL_INITIAL
                 loop_count = 0
                 level = 1
                 score = 0
@@ -195,15 +230,18 @@ def main():
                 dash_timer = 0
 
                 # エイリアンの初期配置
-                for ypos in range(ALIAN_ROW):
-                    offset = 96 if ypos < 2 else 144
-                    for xpos in range(ALIAN_COL):
-                        rect = Rect(xpos * 50 + 100, ypos * 50 + 50, 24, 24)
-                        alien = Alien(rect, offset, (4 - ypos) * 10)
+                for ypos in range(ALIEN_ROW):
+                    offset = ALIEN_SPRITE_OFFSET_TOP if ypos < ALIEN_TOP_ROWS else ALIEN_SPRITE_OFFSET_BOTTOM
+                    for xpos in range(ALIEN_COL):
+                        x = xpos * ALIEN_SPACING_X + ALIEN_START_X
+                        y = ypos * ALIEN_SPACING_Y + ALIEN_START_Y
+                        rect = Rect(x, y, ALIEN_SPRITE_SIZE, ALIEN_SPRITE_SIZE)
+                        score_value = (ALIEN_SCORE_ROW_MULTIPLIER - ypos) * ALIEN_SCORE_BASE
+                        alien = Alien(rect, offset, score_value)
                         aliens.append(alien)
 
-                # 【変更】エイリアンのビーム初期化（4→8に増加で弾幕強化）
-                for _ in range(8):
+                # エイリアンのビーム初期化
+                for _ in range(ALIEN_TOTAL_BEAM):
                     beams.append(Beam())
 
                 game_state = GAME_STATE_PLAY
@@ -291,9 +329,9 @@ def main():
 
                         # 左移動フラグに応じて、移動方向（左右移動距離）を決める
                         move_x = (
-                            -level * ALIAN_BASE_SPEED * ALIAN_MULTIPLIER_SPEED
+                            -level * ALIEN_BASE_SPEED * ALIEN_MULTIPLIER_SPEED
                             if is_left_move
-                            else level * ALIAN_BASE_SPEED * ALIAN_MULTIPLIER_SPEED
+                            else level * ALIEN_BASE_SPEED * ALIEN_MULTIPLIER_SPEED
                         )
                         move_y = 0
 
@@ -303,7 +341,7 @@ def main():
                             or area.right > SCREEN_RIGHT_BOUNDARY
                         ) and not is_down_move:
                             is_left_move = not is_left_move
-                            move_x, move_y = 0, ALIAN_DOWN_MOVE
+                            move_x, move_y = 0, ALIEN_DOWN_MOVE
                             move_interval = max(1, move_interval - 2)
                             is_down_move = True
                         else:
@@ -314,7 +352,7 @@ def main():
                             alien.move(move_x, move_y)
 
                         # エイリアンが最下段まで来たら、ゲームオーバー
-                        if area.bottom > ARIAN_GAMEOVER_LINE:
+                        if area.bottom > ALIEN_GAMEOVER_LINE:
                             is_gameover = True
                             game_state = GAME_STATE_GAMEOVER
 
@@ -324,12 +362,12 @@ def main():
                     if beam.on_draw:
                         # 下方向に移動する
                         beam.move(
-                            0, ALIAN_BEAM_BASE_SPEED + level * ALIAN_BEAM_MULTIPLIER
+                            0, ALIEN_BEAM_BASE_SPEED + level * ALIEN_BEAM_MULTIPLIER
                         )
                         # 画面の一番下に到達した場合
-                        if beam.rect.top > 600:
+                        if beam.rect.top > WINDOW_HEIGHT:
                             # 次の発射タイミングを、ループカウンタ＋αにする
-                            beam.fire_timing = loop_count + randint(20, 200)
+                            beam.fire_timing = loop_count + randint(ALIEN_BEAM_FIRE_DELAY_MIN, ALIEN_BEAM_FIRE_DELAY_MAX)
                             # 敵ビームの描画フラグをFalseにする
                             beam.on_draw = False
 
@@ -365,22 +403,28 @@ def main():
 
                 # 全エイリアンと倒した場合次のレベルへ（リセット）
                 if len(aliens) == 0:
-                    move_interval = max(10, 20 - (level - 1) * 2)
+                    move_interval = max(
+                        ALIEN_MOVE_INTERVAL_MIN,
+                        ALIEN_MOVE_INTERVAL_BASE - (level - 1) * ALIEN_MOVE_INTERVAL_DECREASE
+                    )
                     is_left_move = True
                     is_down_move = False
                     aliens = []
                     beams = []
-                    for ypos in range(ALIAN_ROW):
-                        offset = 96 if ypos < 2 else 144
-                        for xpos in range(ALIAN_COL):
-                            rect = Rect(xpos * 50 + 100, ypos * 50 + 50, 24, 24)
-                            alien = Alien(rect, offset, (4 - ypos) * 10)
+                    for ypos in range(ALIEN_ROW):
+                        offset = ALIEN_SPRITE_OFFSET_TOP if ypos < ALIEN_TOP_ROWS else ALIEN_SPRITE_OFFSET_BOTTOM
+                        for xpos in range(ALIEN_COL):
+                            x = xpos * ALIEN_SPACING_X + ALIEN_START_X
+                            y = ypos * ALIEN_SPACING_Y + ALIEN_START_Y
+                            rect = Rect(x, y, ALIEN_SPRITE_SIZE, ALIEN_SPRITE_SIZE)
+                            score_value = (ALIEN_SCORE_ROW_MULTIPLIER - ypos) * ALIEN_SCORE_BASE
+                            alien = Alien(rect, offset, score_value)
                             aliens.append(alien)
-                    # 敵ビームを8発生成
-                    for _ in range(ALIAN_TOTAL_BEAM):
+                    # 敵ビーム生成
+                    for _ in range(ALIEN_TOTAL_BEAM):
                         beams.append(Beam())
                     level += 1
-                    levelup_timer = 12  # レベルアップ表示用タイマーセット
+                    levelup_timer = LEVELUP_DISPLAY_FRAMES
 
             # ======= 描画処理 =======
             surface.fill(COLOR_BLACK)
@@ -396,16 +440,16 @@ def main():
             # スコアの描画
             score_str = str(score).zfill(5)
             score_image = SMALL_FONT.render(score_str, True, COLOR_GREEN)
-            surface.blit(score_image, (500, 10))
+            surface.blit(score_image, (SCORE_POSITION_X, SCORE_POSITION_Y))
 
             # レベルの描画
             level_str = f"Level {level}"
             level_image = SMALL_FONT.render(level_str, True, COLOR_GREEN)
-            surface.blit(level_image, (25, 10))
+            surface.blit(level_image, (LEVEL_POSITION_X, LEVEL_POSITION_Y))
 
             # ダッシュゲージの描画（画面下部）
             dash_gauge_x = WINDOW_WIDTH // 2 - DASH_GUAGE_WIDTH // 2
-            dash_gauge_y = WINDOW_HEIGHT - 20
+            dash_gauge_y = WINDOW_HEIGHT - DASH_GAUGE_OFFSET_Y
             # ゲージ背景
             pygame.draw.rect(
                 surface,
@@ -429,7 +473,7 @@ def main():
             # ダッシュ中は点滅表示
             if is_dashing and loop_count % 2 == 0:
                 dash_rect = DASH_MESSAGE_SURFACE.get_rect()
-                dash_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT - 30)
+                dash_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT - DASH_TEXT_OFFSET_Y)
                 surface.blit(DASH_MESSAGE_SURFACE, dash_rect.topleft)
 
             # レベルアップ表示
@@ -454,12 +498,12 @@ def main():
             # スコア描画
             score_str = str(score).zfill(5)
             score_image = SMALL_FONT.render(score_str, True, COLOR_GREEN)
-            surface.blit(score_image, (500, 10))
+            surface.blit(score_image, (SCORE_POSITION_X, SCORE_POSITION_Y))
 
             # レベルの描画
             level_str = f"Level {level}"
             level_image = SMALL_FONT.render(level_str, True, COLOR_GREEN)
-            surface.blit(level_image, (25, 10))
+            surface.blit(level_image, (LEVEL_POSITION_X, LEVEL_POSITION_Y))
 
             # メッセージ表示
             if game_state == GAME_STATE_CLEAR:
@@ -474,8 +518,8 @@ def main():
             # リトライメッセージ
             retry_msg = RETRY_MESSAGE_SURFACE
             retry_rect = retry_msg.get_rect()
-            retry_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 80)
-            if (pygame.time.get_ticks() // 500) % 2 == 0:
+            retry_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + RETRY_MESSAGE_OFFSET_Y)
+            if (pygame.time.get_ticks() // MESSAGE_BLINK_INTERVAL) % 2 == 0:
                 surface.blit(retry_msg, retry_rect.topleft)
 
             # スペースキーでリスタート
@@ -490,7 +534,7 @@ def main():
         # 画面更新
         pygame.display.update()
         # 一定間隔の処理
-        clock.tick(20)
+        clock.tick(GAME_FPS)
 
 
 if __name__ == "__main__":
