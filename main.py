@@ -170,27 +170,107 @@ def initialize_game():
     # エイリアンのビーム初期化
     for _ in range(ALIEN_TOTAL_BEAM):
         beams.append(Beam())
-        
+
     return {
-        'keymap' : keymap,
-        'is_gameover' : is_gameover,
-        'is_left_move' : is_left_move,
-        'is_down_move' : is_down_move,
-        'move_interval' : move_interval,
-        'loop_count' : loop_count,
-        'level' : level,
-        'score' : score,
-        'aliens' : aliens,
-        'beams' : beams,
-        'levelup_timer' : levelup_timer,
-        'ship' : ship,
-        'shots' : shots,
-        'burst_remaining' : burst_remaining,
-        'burst_interval' : burst_interval,
-        'dash_cooldown' : dash_cooldown,
-        'is_dashing' : is_dashing,
-        'dash_direction' : dash_direction,
-        'dash_timer' : dash_timer,
+        "keymap": keymap,
+        "is_gameover": is_gameover,
+        "is_left_move": is_left_move,
+        "is_down_move": is_down_move,
+        "move_interval": move_interval,
+        "loop_count": loop_count,
+        "level": level,
+        "score": score,
+        "aliens": aliens,
+        "beams": beams,
+        "levelup_timer": levelup_timer,
+        "ship": ship,
+        "shots": shots,
+        "burst_remaining": burst_remaining,
+        "burst_interval": burst_interval,
+        "dash_cooldown": dash_cooldown,
+        "is_dashing": is_dashing,
+        "dash_direction": dash_direction,
+        "dash_timer": dash_timer,
+    }
+
+
+def handle_input(
+    keymap,
+    ship,
+    shots,
+    burst_remaining,
+    burst_interval,
+    dash_cooldown,
+    is_dashing,
+    dash_direction,
+    dash_timer,
+):
+    # 自機の移動距離は毎回０に初期化する
+    ship_move_x = 0
+
+    # 左右キーの場合、自機の移動距離を設定
+    if K_LEFT in keymap or K_a in keymap:
+        ship_move_x = -SHIP_MOVE_SPEED
+    if K_RIGHT in keymap or K_d in keymap:
+        ship_move_x = SHIP_MOVE_SPEED
+
+        # ===== 緊急回避（ダッシュ）処理 =====
+    # ダッシュクールダウンを減らす
+    if dash_cooldown > 0:
+        dash_cooldown -= 1
+
+    # 【追加】Shiftキー + 方向キーでダッシュ開始
+    if K_LSHIFT in keymap and dash_cooldown == 0 and not is_dashing:
+        # 左右どちらかのキーが押されている場合のみダッシュ発動
+        if K_LEFT in keymap or K_a in keymap:
+            is_dashing = True
+            dash_direction = -1  # 左方向
+            dash_timer = DASH_DURATION
+            dash_cooldown = DASH_COOLDOWN_TIME
+        elif K_RIGHT in keymap or K_d in keymap:
+            is_dashing = True
+            dash_direction = 1  # 右方向
+            dash_timer = DASH_DURATION
+            dash_cooldown = DASH_COOLDOWN_TIME
+
+    # 【追加】ダッシュ中の移動処理
+    if is_dashing:
+        ship_move_x = DASH_SPEED * dash_direction  # 高速移動
+        dash_timer -= 1
+        if dash_timer <= 0:
+            is_dashing = False  # ダッシュ終了
+
+    # ===== 3点バースト発射処理 =====
+    # 【変更】スペースキーでバースト開始（バースト中でなければ）
+    if K_SPACE in keymap and burst_remaining == 0 and burst_interval == 0:
+        burst_remaining = BURST_COUNT  # バースト残数をセット
+
+    # 【追加】バースト間隔タイマーを減らす
+    if burst_interval > 0:
+        burst_interval -= 1
+
+    # 【追加】バースト残数があり、間隔タイマーが0なら弾を発射
+    if burst_remaining > 0 and burst_interval == 0:
+        new_shot = Shot()
+        new_shot.rect.center = ship.rect.center
+        new_shot.on_draw = True
+        shots.append(new_shot)
+        burst_remaining -= 1  # 残り発射数を減らす
+        # 最後の弾ならクールダウン、途中ならバースト間隔をセット
+        if burst_remaining == 0:
+            burst_interval = BURST_COOLDOWN  # 次のバーストまでのクールダウン
+        else:
+            burst_interval = BURST_DELAY  # 次の弾までの間隔
+
+    return {
+        "ship_move_x": ship_move_x,
+        "shots": shots,
+        "burst_remaining": burst_remaining,
+        "burst_interval": burst_interval,
+        "dash_cooldown": dash_cooldown,
+        "is_dashing": is_dashing,
+        "dash_direction": dash_direction,
+        "dash_timer": dash_timer,
     }
 
 
@@ -237,88 +317,55 @@ def main():
             if K_SPACE in keymap:
                 game_vars = initialize_game()
                 # 辞書から各変数を取り出す
-                keymap = game_vars['keymap']
-                is_gameover = game_vars['is_gameover']
-                is_left_move = game_vars['is_left_move']
-                is_down_move = game_vars['is_down_move']
-                move_interval = game_vars['move_interval']
-                loop_count = game_vars['loop_count']
-                level = game_vars['level']
-                score = game_vars['score']
-                aliens = game_vars['aliens']
-                beams = game_vars['beams']
-                levelup_timer = game_vars['levelup_timer']
-                ship = game_vars['ship']
-                shots = game_vars['shots']
-                burst_remaining = game_vars['burst_remaining']
-                burst_interval = game_vars['burst_interval']
-                dash_cooldown = game_vars['dash_cooldown']
-                is_dashing = game_vars['is_dashing']
-                dash_direction = game_vars['dash_direction']
-                dash_timer = game_vars['dash_timer']
+                keymap = game_vars["keymap"]
+                is_gameover = game_vars["is_gameover"]
+                is_left_move = game_vars["is_left_move"]
+                is_down_move = game_vars["is_down_move"]
+                move_interval = game_vars["move_interval"]
+                loop_count = game_vars["loop_count"]
+                level = game_vars["level"]
+                score = game_vars["score"]
+                aliens = game_vars["aliens"]
+                beams = game_vars["beams"]
+                levelup_timer = game_vars["levelup_timer"]
+                ship = game_vars["ship"]
+                shots = game_vars["shots"]
+                burst_remaining = game_vars["burst_remaining"]
+                burst_interval = game_vars["burst_interval"]
+                dash_cooldown = game_vars["dash_cooldown"]
+                is_dashing = game_vars["is_dashing"]
+                dash_direction = game_vars["dash_direction"]
+                dash_timer = game_vars["dash_timer"]
                 game_state = GAME_STATE_PLAY
 
         # ------------------------------------------------
         # 状態2: ゲームプレイ中
         # ------------------------------------------------
         elif game_state == GAME_STATE_PLAY:
-            # 自機の移動距離は毎回０に初期化する
-            ship_move_x = 0
-
-            # 左右キーの場合、自機の移動距離を設定
-            if K_LEFT in keymap or K_a in keymap:
-                ship_move_x = -SHIP_MOVE_SPEED
-            if K_RIGHT in keymap or K_d in keymap:
-                ship_move_x = SHIP_MOVE_SPEED
-
-            # ===== 緊急回避（ダッシュ）処理 =====
-            # ダッシュクールダウンを減らす
-            if dash_cooldown > 0:
-                dash_cooldown -= 1
-
-            # 【追加】Shiftキー + 方向キーでダッシュ開始
-            if K_LSHIFT in keymap and dash_cooldown == 0 and not is_dashing:
-                # 左右どちらかのキーが押されている場合のみダッシュ発動
-                if K_LEFT in keymap or K_a in keymap:
-                    is_dashing = True
-                    dash_direction = -1  # 左方向
-                    dash_timer = DASH_DURATION
-                    dash_cooldown = DASH_COOLDOWN_TIME
-                elif K_RIGHT in keymap or K_d in keymap:
-                    is_dashing = True
-                    dash_direction = 1  # 右方向
-                    dash_timer = DASH_DURATION
-                    dash_cooldown = DASH_COOLDOWN_TIME
-
-            # 【追加】ダッシュ中の移動処理
-            if is_dashing:
-                ship_move_x = DASH_SPEED * dash_direction  # 高速移動
-                dash_timer -= 1
-                if dash_timer <= 0:
-                    is_dashing = False  # ダッシュ終了
-
-            # ===== 3点バースト発射処理 =====
-            # 【変更】スペースキーでバースト開始（バースト中でなければ）
-            if K_SPACE in keymap and burst_remaining == 0 and burst_interval == 0:
-                burst_remaining = BURST_COUNT  # バースト残数をセット
-
-            # 【追加】バースト間隔タイマーを減らす
-            if burst_interval > 0:
-                burst_interval -= 1
-
-            # 【追加】バースト残数があり、間隔タイマーが0なら弾を発射
-            if burst_remaining > 0 and burst_interval == 0:
-                new_shot = Shot()
-                new_shot.rect.center = ship.rect.center
-                new_shot.on_draw = True
-                shots.append(new_shot)
-                burst_remaining -= 1  # 残り発射数を減らす
-                # 最後の弾ならクールダウン、途中ならバースト間隔をセット
-                if burst_remaining == 0:
-                    burst_interval = BURST_COOLDOWN  # 次のバーストまでのクールダウン
-                else:
-                    burst_interval = BURST_DELAY  # 次の弾までの間隔
-
+            # ======= 入力処理 =======
+            game_handle = handle_input(
+                keymap,
+                ship,
+                shots,
+                burst_remaining,
+                burst_interval,
+                dash_cooldown,
+                is_dashing,
+                dash_direction,
+                dash_timer,
+            )
+            
+            ship_move_x = game_handle["ship_move_x"]
+            shots = game_handle["shots"]
+            burst_remaining = game_handle["burst_remaining"]
+            burst_interval = game_handle["burst_interval"]
+            dash_cooldown = game_handle["dash_cooldown"]
+            is_dashing = game_handle["is_dashing"]
+            dash_direction = game_handle["dash_direction"]
+            dash_timer = game_handle["dash_timer"]
+            
+            
+            # ======= ゲーム内処理 =======
             if not is_gameover:
                 loop_count += 1
                 ship.move(ship_move_x, 0)
