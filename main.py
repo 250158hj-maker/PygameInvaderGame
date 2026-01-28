@@ -143,7 +143,7 @@ def main():
     # ゲームの初期状態設定
     game_state = GAME_STATE_TITLE
     keymap = []  # キーマップ
-    
+
     # ======= メインループ =======
     while True:
         # イベント処理（全状態共通）
