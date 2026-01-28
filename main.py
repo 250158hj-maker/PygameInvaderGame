@@ -22,10 +22,8 @@ SCREEN_LEFT_BOUNDARY = 10
 SCREEN_RIGHT_BOUNDARY = 590
 ALIEN_GAMEOVER_LINE = 550
 WINDOW_SIZE = (WINDOW_WIDTH, WINDOW_WIDTH)
-
 # キャプション
 GAME_CAPTION = "*** Invader Game ***"
-
 # 色
 COLOR_BLACK = (0, 0, 0)
 COLOR_WHITE = (255, 255, 255)
@@ -34,7 +32,6 @@ COLOR_YELLOW = (255, 255, 0)
 COLOR_GREEN = (0, 255, 0)
 COLOR_GRAY = (60, 60, 60)
 COLOR_ORANGE = (255, 165, 0)
-
 
 pygame.init()
 # キー押下判定を 5ミリ秒単位にする
@@ -54,13 +51,11 @@ START_MESSAGE = "PRESS SPACE TO START"
 RETRY_MESSAGE = "PRESS SPACE TO RETRY"
 LEVEL_UP_MESSAGE = "LEVEL UP!!"
 DASH_MESSAGE = "DASH!!"
-
 # フォント
 FONT_SIZE_LARGE = 72
 FONT_SIZE_SMALL = 36
 LARGE_FONT = pygame.font.SysFont(None, FONT_SIZE_LARGE)
 SMALL_FONT = pygame.font.SysFont(None, FONT_SIZE_SMALL)
-
 # 描画用画像（文字列を画像に変換）
 CLEAR_MESSAGE_SURFACE = LARGE_FONT.render(CLEAR_MESSAGE, True, COLOR_CYAN)
 GAMEOVER_MESSAGE_SURFACE = LARGE_FONT.render(GAMEOVER_MESSAGE, True, COLOR_CYAN)
@@ -69,7 +64,6 @@ START_MESSAGE_SURFACE = SMALL_FONT.render(START_MESSAGE, True, COLOR_WHITE)
 RETRY_MESSAGE_SURFACE = SMALL_FONT.render(RETRY_MESSAGE, True, COLOR_WHITE)
 LEVEL_UP_MESSAGE_SURFACE = LARGE_FONT.render(LEVEL_UP_MESSAGE, True, COLOR_YELLOW)
 DASH_MESSAGE_SURFACE = SMALL_FONT.render(DASH_MESSAGE, True, COLOR_YELLOW)
-
 # ゲーム状態
 GAME_STATE_TITLE = "TITLE"
 GAME_STATE_PLAY = "PLAY"
@@ -90,7 +84,6 @@ ALIEN_START_Y = 50
 ALIEN_TOP_ROWS = 2  # 上段の行数
 ALIEN_SCORE_BASE = 10  # スコア計算用
 ALIEN_SCORE_ROW_MULTIPLIER = 4  # スコア計算用
-
 # エイリアン移動
 ALIEN_BASE_SPEED = 5
 ALIEN_MULTIPLIER_SPEED = 0.75
@@ -99,19 +92,15 @@ ALIEN_MOVE_INTERVAL_INITIAL = 20
 ALIEN_MOVE_INTERVAL_MIN = 10
 ALIEN_MOVE_INTERVAL_DECREASE = 2
 ALIEN_MOVE_INTERVAL_BASE = 20
-
 # エイリアンビーム
 ALIEN_TOTAL_BEAM = 8
 ALIEN_BEAM_BASE_SPEED = 10
 ALIEN_BEAM_MULTIPLIER = 2
 ALIEN_BEAM_FIRE_DELAY_MIN = 20
 ALIEN_BEAM_FIRE_DELAY_MAX = 200
-
-
 # 自機とショット
 SHIP_MOVE_SPEED = 8
 SHOT_MOVE_SPEED = 25
-
 # UI配置
 SCORE_POSITION_X = 500
 SCORE_POSITION_Y = 10
@@ -122,10 +111,8 @@ DASH_TEXT_OFFSET_Y = 30
 RETRY_MESSAGE_OFFSET_Y = 80
 MESSAGE_BLINK_INTERVAL = 500  # ミリ秒
 LEVELUP_DISPLAY_FRAMES = 12
-
 # ゲーム設定
 GAME_FPS = 20
-
 # 3点バースト
 BURST_COUNT = 3  # 1回のバーストで発射する弾数
 BURST_DELAY = 3  # バースト間の発射間隔（フレーム数）
@@ -136,6 +123,75 @@ DASH_GUAGE_HEIGHT = 10
 DASH_SPEED = 40  # ダッシュ時の移動速度
 DASH_DURATION = 3  # ダッシュの持続フレーム数
 DASH_COOLDOWN_TIME = 30  # ダッシュのクールダウン（フレーム数）
+
+
+def initialize_game():
+    # ゲーム変数の初期化
+    keymap = []  # キーマップリセット（押しっぱなし防止など）
+    is_gameover = False
+    is_left_move = True
+    is_down_move = False
+    move_interval = ALIEN_MOVE_INTERVAL_INITIAL
+    loop_count = 0
+    level = 1
+    score = 0
+    aliens = []
+    beams = []
+    levelup_timer = 0  # レベルアップ表示用タイマー
+
+    # 自機・ショット・敵の生成
+    ship = Ship()
+    # 【変更】shots をリストで管理（3点バースト対応）
+    shots = []
+    burst_remaining = 0
+    burst_interval = 0
+
+    # 【追加】緊急回避用変数の初期化
+    dash_cooldown = 0
+    is_dashing = False
+    dash_direction = 0
+    dash_timer = 0
+
+    # エイリアンの初期配置
+    for ypos in range(ALIEN_ROW):
+        offset = (
+            ALIEN_SPRITE_OFFSET_TOP
+            if ypos < ALIEN_TOP_ROWS
+            else ALIEN_SPRITE_OFFSET_BOTTOM
+        )
+        for xpos in range(ALIEN_COL):
+            x = xpos * ALIEN_SPACING_X + ALIEN_START_X
+            y = ypos * ALIEN_SPACING_Y + ALIEN_START_Y
+            rect = Rect(x, y, ALIEN_SPRITE_SIZE, ALIEN_SPRITE_SIZE)
+            score_value = (ALIEN_SCORE_ROW_MULTIPLIER - ypos) * ALIEN_SCORE_BASE
+            alien = Alien(rect, offset, score_value)
+            aliens.append(alien)
+
+    # エイリアンのビーム初期化
+    for _ in range(ALIEN_TOTAL_BEAM):
+        beams.append(Beam())
+        
+    return {
+        'keymap' : keymap,
+        'is_gameover' : is_gameover,
+        'is_left_move' : is_left_move,
+        'is_down_move' : is_down_move,
+        'move_interval' : move_interval,
+        'loop_count' : loop_count,
+        'level' : level,
+        'score' : score,
+        'aliens' : aliens,
+        'beams' : beams,
+        'levelup_timer' : levelup_timer,
+        'ship' : ship,
+        'shots' : shots,
+        'burst_remaining' : burst_remaining,
+        'burst_interval' : burst_interval,
+        'dash_cooldown' : dash_cooldown,
+        'is_dashing' : is_dashing,
+        'dash_direction' : dash_direction,
+        'dash_timer' : dash_timer,
+    }
 
 
 # ======= メイン処理 =======
@@ -179,53 +235,27 @@ def main():
 
             # スペースキーでゲーム開始（初期化処理）
             if K_SPACE in keymap:
-                # ゲーム変数の初期化
-                keymap = []  # キーマップリセット（押しっぱなし防止など）
-                is_gameover = False
-                is_left_move = True
-                is_down_move = False
-                move_interval = ALIEN_MOVE_INTERVAL_INITIAL
-                loop_count = 0
-                level = 1
-                score = 0
-                aliens = []
-                beams = []
-                levelup_timer = 0  # レベルアップ表示用タイマー
-
-                # 自機・ショット・敵の生成
-                ship = Ship()
-                # 【変更】shots をリストで管理（3点バースト対応）
-                shots = []
-                burst_remaining = 0
-                burst_interval = 0
-
-                # 【追加】緊急回避用変数の初期化
-                dash_cooldown = 0
-                is_dashing = False
-                dash_direction = 0
-                dash_timer = 0
-
-                # エイリアンの初期配置
-                for ypos in range(ALIEN_ROW):
-                    offset = (
-                        ALIEN_SPRITE_OFFSET_TOP
-                        if ypos < ALIEN_TOP_ROWS
-                        else ALIEN_SPRITE_OFFSET_BOTTOM
-                    )
-                    for xpos in range(ALIEN_COL):
-                        x = xpos * ALIEN_SPACING_X + ALIEN_START_X
-                        y = ypos * ALIEN_SPACING_Y + ALIEN_START_Y
-                        rect = Rect(x, y, ALIEN_SPRITE_SIZE, ALIEN_SPRITE_SIZE)
-                        score_value = (
-                            ALIEN_SCORE_ROW_MULTIPLIER - ypos
-                        ) * ALIEN_SCORE_BASE
-                        alien = Alien(rect, offset, score_value)
-                        aliens.append(alien)
-
-                # エイリアンのビーム初期化
-                for _ in range(ALIEN_TOTAL_BEAM):
-                    beams.append(Beam())
-
+                game_vars = initialize_game()
+                # 辞書から各変数を取り出す
+                keymap = game_vars['keymap']
+                is_gameover = game_vars['is_gameover']
+                is_left_move = game_vars['is_left_move']
+                is_down_move = game_vars['is_down_move']
+                move_interval = game_vars['move_interval']
+                loop_count = game_vars['loop_count']
+                level = game_vars['level']
+                score = game_vars['score']
+                aliens = game_vars['aliens']
+                beams = game_vars['beams']
+                levelup_timer = game_vars['levelup_timer']
+                ship = game_vars['ship']
+                shots = game_vars['shots']
+                burst_remaining = game_vars['burst_remaining']
+                burst_interval = game_vars['burst_interval']
+                dash_cooldown = game_vars['dash_cooldown']
+                is_dashing = game_vars['is_dashing']
+                dash_direction = game_vars['dash_direction']
+                dash_timer = game_vars['dash_timer']
                 game_state = GAME_STATE_PLAY
 
         # ------------------------------------------------
@@ -476,7 +506,6 @@ def main():
                 levelup_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
                 surface.blit(LEVEL_UP_MESSAGE_SURFACE, levelup_rect.topleft)
                 levelup_timer -= 1
-
         # ------------------------------------------------
         # 状態3: ゲームオーバー / クリア
         # ------------------------------------------------
