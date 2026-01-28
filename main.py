@@ -314,6 +314,74 @@ def setup_next_level(level):
         "levelup_timer": levelup_timer,
     }
 
+def draw_game_screen(ship, shots, aliens, beams, score, level,
+                     dash_cooldown, is_dashing, loop_count, levelup_timer):
+    """ゲーム画面を描画"""
+    surface.fill(COLOR_BLACK)
+    ship.draw()
+    # 全てのショットを描画（リスト対応）
+    for s in shots:
+        s.draw()
+    for alien in aliens:
+        alien.draw()
+    for beam in beams:
+        beam.draw()
+
+    # スコアの描画
+    score_str = str(score).zfill(5)
+    score_image = SMALL_FONT.render(score_str, True, COLOR_GREEN)
+    surface.blit(score_image, (SCORE_POSITION_X, SCORE_POSITION_Y))
+
+    # レベルの描画
+    level_str = f"Level {level}"
+    level_image = SMALL_FONT.render(level_str, True, COLOR_GREEN)
+    surface.blit(level_image, (LEVEL_POSITION_X, LEVEL_POSITION_Y))
+
+    # ダッシュゲージの描画（画面下部）
+    dash_gauge_x = WINDOW_WIDTH // 2 - DASH_GUAGE_WIDTH // 2
+    dash_gauge_y = WINDOW_HEIGHT - DASH_GAUGE_OFFSET_Y
+    # ゲージ背景
+    pygame.draw.rect(
+        surface,
+        COLOR_GRAY,
+        (dash_gauge_x, dash_gauge_y, DASH_GUAGE_WIDTH, DASH_GUAGE_HEIGHT),
+    )
+    # ゲージ本体（クールダウン残量に応じて増減） 本体の上に重ねて描画
+    if dash_cooldown == 0:
+        gauge_color = COLOR_CYAN
+        gauge_fill = DASH_GUAGE_WIDTH
+    else:
+        gauge_color = COLOR_ORANGE
+        gauge_fill = int(
+            DASH_GUAGE_WIDTH * (1 - dash_cooldown / DASH_COOLDOWN_TIME)
+        )
+    pygame.draw.rect(
+        surface,
+        gauge_color,
+        (dash_gauge_x, dash_gauge_y, gauge_fill, DASH_GUAGE_HEIGHT),
+    )
+    # ダッシュ中は点滅表示
+    if is_dashing and loop_count % 2 == 0:
+        dash_rect = DASH_MESSAGE_SURFACE.get_rect()
+        dash_rect.center = (
+            WINDOW_WIDTH // 2,
+            WINDOW_HEIGHT - DASH_TEXT_OFFSET_Y,
+        )
+        surface.blit(DASH_MESSAGE_SURFACE, dash_rect.topleft)
+
+    # レベルアップ表示
+    if levelup_timer > 0:
+        levelup_rect = LEVEL_UP_MESSAGE_SURFACE.get_rect()
+        levelup_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
+        surface.blit(LEVEL_UP_MESSAGE_SURFACE, levelup_rect.topleft)
+    
+    # levelup_timerをデクリメント
+    levelup_timer = max(0, levelup_timer - 1)
+    
+    return {
+        "levelup_timer": levelup_timer
+    }
+
 # ======= メイン処理 =======
 def main():
     # ゲームの初期状態設定
@@ -514,64 +582,9 @@ def main():
                     levelup_timer = setup["levelup_timer"]
                     
             # ======= 描画処理 =======
-            surface.fill(COLOR_BLACK)
-            ship.draw()
-            # 全てのショットを描画（リスト対応）
-            for s in shots:
-                s.draw()
-            for alien in aliens:
-                alien.draw()
-            for beam in beams:
-                beam.draw()
-
-            # スコアの描画
-            score_str = str(score).zfill(5)
-            score_image = SMALL_FONT.render(score_str, True, COLOR_GREEN)
-            surface.blit(score_image, (SCORE_POSITION_X, SCORE_POSITION_Y))
-
-            # レベルの描画
-            level_str = f"Level {level}"
-            level_image = SMALL_FONT.render(level_str, True, COLOR_GREEN)
-            surface.blit(level_image, (LEVEL_POSITION_X, LEVEL_POSITION_Y))
-
-            # ダッシュゲージの描画（画面下部）
-            dash_gauge_x = WINDOW_WIDTH // 2 - DASH_GUAGE_WIDTH // 2
-            dash_gauge_y = WINDOW_HEIGHT - DASH_GAUGE_OFFSET_Y
-            # ゲージ背景
-            pygame.draw.rect(
-                surface,
-                COLOR_GRAY,
-                (dash_gauge_x, dash_gauge_y, DASH_GUAGE_WIDTH, DASH_GUAGE_HEIGHT),
-            )
-            # ゲージ本体（クールダウン残量に応じて増減） 本体の上に重ねて描画
-            if dash_cooldown == 0:
-                gauge_color = COLOR_CYAN
-                gauge_fill = DASH_GUAGE_WIDTH
-            else:
-                gauge_color = COLOR_ORANGE
-                gauge_fill = int(
-                    DASH_GUAGE_WIDTH * (1 - dash_cooldown / DASH_COOLDOWN_TIME)
-                )
-            pygame.draw.rect(
-                surface,
-                gauge_color,
-                (dash_gauge_x, dash_gauge_y, gauge_fill, DASH_GUAGE_HEIGHT),
-            )
-            # ダッシュ中は点滅表示
-            if is_dashing and loop_count % 2 == 0:
-                dash_rect = DASH_MESSAGE_SURFACE.get_rect()
-                dash_rect.center = (
-                    WINDOW_WIDTH // 2,
-                    WINDOW_HEIGHT - DASH_TEXT_OFFSET_Y,
-                )
-                surface.blit(DASH_MESSAGE_SURFACE, dash_rect.topleft)
-
-            # レベルアップ表示
-            if levelup_timer > 0:
-                levelup_rect = LEVEL_UP_MESSAGE_SURFACE.get_rect()
-                levelup_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
-                surface.blit(LEVEL_UP_MESSAGE_SURFACE, levelup_rect.topleft)
-                levelup_timer -= 1
+            draw_result = draw_game_screen(ship, shots, aliens, beams, score, level,
+                                          dash_cooldown, is_dashing, loop_count, levelup_timer)
+            levelup_timer = draw_result["levelup_timer"]
         # ------------------------------------------------
         # 状態3: ゲームオーバー / クリア
         # ------------------------------------------------
