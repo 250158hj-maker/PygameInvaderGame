@@ -273,6 +273,46 @@ def handle_input(
         "dash_timer": dash_timer,
     }
 
+def setup_next_level(level):
+    move_interval = max(
+        ALIEN_MOVE_INTERVAL_MIN,
+        ALIEN_MOVE_INTERVAL_BASE
+        - (level - 1) * ALIEN_MOVE_INTERVAL_DECREASE,
+    )
+    is_left_move = True
+    is_down_move = False
+    aliens = []
+    beams = []
+    for ypos in range(ALIEN_ROW):
+        offset = (
+            ALIEN_SPRITE_OFFSET_TOP
+            if ypos < ALIEN_TOP_ROWS
+            else ALIEN_SPRITE_OFFSET_BOTTOM
+        )
+        for xpos in range(ALIEN_COL):
+            x = xpos * ALIEN_SPACING_X + ALIEN_START_X
+            y = ypos * ALIEN_SPACING_Y + ALIEN_START_Y
+            rect = Rect(x, y, ALIEN_SPRITE_SIZE, ALIEN_SPRITE_SIZE)
+            score_value = (
+                ALIEN_SCORE_ROW_MULTIPLIER - ypos
+            ) * ALIEN_SCORE_BASE
+            alien = Alien(rect, offset, score_value)
+            aliens.append(alien)
+    # 敵ビーム生成
+    for _ in range(ALIEN_TOTAL_BEAM):
+        beams.append(Beam())
+    level += 1
+    levelup_timer = LEVELUP_DISPLAY_FRAMES
+
+    return {
+        "move_interval": move_interval,
+        "is_left_move": is_left_move,
+        "is_down_move": is_down_move,
+        "aliens": aliens,
+        "beams": beams,
+        "level": level,
+        "levelup_timer": levelup_timer,
+    }
 
 # ======= メイン処理 =======
 def main():
@@ -464,36 +504,15 @@ def main():
 
                 # 全エイリアンと倒した場合次のレベルへ（リセット）
                 if len(aliens) == 0:
-                    move_interval = max(
-                        ALIEN_MOVE_INTERVAL_MIN,
-                        ALIEN_MOVE_INTERVAL_BASE
-                        - (level - 1) * ALIEN_MOVE_INTERVAL_DECREASE,
-                    )
-                    is_left_move = True
-                    is_down_move = False
-                    aliens = []
-                    beams = []
-                    for ypos in range(ALIEN_ROW):
-                        offset = (
-                            ALIEN_SPRITE_OFFSET_TOP
-                            if ypos < ALIEN_TOP_ROWS
-                            else ALIEN_SPRITE_OFFSET_BOTTOM
-                        )
-                        for xpos in range(ALIEN_COL):
-                            x = xpos * ALIEN_SPACING_X + ALIEN_START_X
-                            y = ypos * ALIEN_SPACING_Y + ALIEN_START_Y
-                            rect = Rect(x, y, ALIEN_SPRITE_SIZE, ALIEN_SPRITE_SIZE)
-                            score_value = (
-                                ALIEN_SCORE_ROW_MULTIPLIER - ypos
-                            ) * ALIEN_SCORE_BASE
-                            alien = Alien(rect, offset, score_value)
-                            aliens.append(alien)
-                    # 敵ビーム生成
-                    for _ in range(ALIEN_TOTAL_BEAM):
-                        beams.append(Beam())
-                    level += 1
-                    levelup_timer = LEVELUP_DISPLAY_FRAMES
-
+                    setup = setup_next_level(level)
+                    move_interval = setup["move_interval"]
+                    is_left_move = setup["is_left_move"]
+                    is_down_move = setup["is_down_move"]
+                    aliens = setup["aliens"]
+                    beams = setup["beams"]
+                    level = setup["level"]
+                    levelup_timer = setup["levelup_timer"]
+                    
             # ======= 描画処理 =======
             surface.fill(COLOR_BLACK)
             ship.draw()
