@@ -215,45 +215,19 @@ def initialize_game() -> GameStatus:
     )
 
 
-def handle_input(game_status: GameStatus) -> tuple[int, GameStatus]:
+def handle_input(game_status: GameStatus) -> int:
     # 自機の移動距離は毎回０に初期化する
-    ship_move_x = 0
+    base_move = 0
 
     if K_LEFT in game_status.keymap or K_a in game_status.keymap:
-        ship_move_x = -SHIP_MOVE_SPEED
+        base_move = -SHIP_MOVE_SPEED
     if K_RIGHT in game_status.keymap or K_d in game_status.keymap:
-        ship_move_x = SHIP_MOVE_SPEED
+        base_move = SHIP_MOVE_SPEED
 
-    # ===== 緊急回避（ダッシュ）処理 =====
-    # ダッシュクールダウンを減らす
-    if game_status.dash_cooldown > 0:
-        game_status.dash_cooldown -= 1
+    return base_move
 
-    # Shiftキー + 方向キーでダッシュ開始
-    if (
-        K_LSHIFT in game_status.keymap
-        and game_status.dash_cooldown == 0
-        and not game_status.is_dashing
-    ):
-        # 左右どちらかのキーが押されている場合のみダッシュ発動
-        if K_LEFT in game_status.keymap or K_a in game_status.keymap:
-            game_status.is_dashing = True
-            game_status.dash_direction = -1  # 左方向
-            game_status.dash_timer = DASH_DURATION
-            game_status.dash_cooldown = DASH_COOLDOWN_TIME
-        elif K_RIGHT in game_status.keymap or K_d in game_status.keymap:
-            game_status.is_dashing = True
-            game_status.dash_direction = 1  # 右方向
-            game_status.dash_timer = DASH_DURATION
-            game_status.dash_cooldown = DASH_COOLDOWN_TIME
 
-    # ダッシュ中の移動処理
-    if game_status.is_dashing:
-        ship_move_x = DASH_SPEED * game_status.dash_direction  # 高速移動
-        game_status.dash_timer -= 1
-        if game_status.dash_timer <= 0:
-            game_status.is_dashing = False  # ダッシュ終了
-
+def update_burst_shots(game_status: GameStatus) -> GameStatus:
     # ===== 3点バースト発射処理 =====
     # スペースキーでバースト開始（バースト中でなければ）
     if (
@@ -282,7 +256,41 @@ def handle_input(game_status: GameStatus) -> tuple[int, GameStatus]:
         else:
             game_status.burst_interval = BURST_DELAY  # 次の弾までの間隔
 
-    return ship_move_x, game_status
+    return game_status
+
+
+def update_dash_system(base_move: int, game_status: GameStatus) -> tuple[int, GameStatus]:
+    # ===== 緊急回避（ダッシュ）処理 =====
+    # ダッシュクールダウンを減らす
+    if game_status.dash_cooldown > 0:
+        game_status.dash_cooldown -= 1
+
+    # Shiftキー + 方向キーでダッシュ開始
+    if (
+        K_LSHIFT in game_status.keymap
+        and game_status.dash_cooldown == 0
+        and not game_status.is_dashing
+    ):
+        # 左右どちらかのキーが押されている場合のみダッシュ発動
+        if K_LEFT in game_status.keymap or K_a in game_status.keymap:
+            game_status.is_dashing = True
+            game_status.dash_direction = -1  # 左方向
+            game_status.dash_timer = DASH_DURATION
+            game_status.dash_cooldown = DASH_COOLDOWN_TIME
+        elif K_RIGHT in game_status.keymap or K_d in game_status.keymap:
+            game_status.is_dashing = True
+            game_status.dash_direction = 1  # 右方向
+            game_status.dash_timer = DASH_DURATION
+            game_status.dash_cooldown = DASH_COOLDOWN_TIME
+
+    # ダッシュ中の移動処理
+    if game_status.is_dashing:
+        base_move = DASH_SPEED * game_status.dash_direction  # 高速移動
+        game_status.dash_timer -= 1
+        if game_status.dash_timer <= 0:
+            game_status.is_dashing = False  # ダッシュ終了
+
+    return base_move, game_status
 
 
 def setup_next_level(game_status: GameStatus) -> GameStatus:
@@ -389,7 +397,7 @@ def main():
     # ゲームの初期状態設定
     current_game_state = GAME_STATE_TITLE
     game_status = None
-    
+
     # ======= メインループ =======
     while True:
         # イベント処理（全状態共通）
@@ -435,7 +443,9 @@ def main():
         # ------------------------------------------------
         elif current_game_state == GAME_STATE_PLAY:
             # ======= 入力処理 =======
-            ship_move_x, game_status = handle_input(game_status)
+            base_move = handle_input(game_status)
+            ship_move_x, game_status = update_dash_system(base_move, game_status)
+            game_status = update_burst_shots(game_status)
 
             # ======= ゲーム内処理 =======
             if not game_status.is_gameover:
@@ -460,9 +470,13 @@ def main():
 
                         # 左移動フラグに応じて、移動方向（左右移動距離）を決める
                         move_x = (
-                            -game_status.level * ALIEN_BASE_SPEED * ALIEN_MULTIPLIER_SPEED
+                            -game_status.level
+                            * ALIEN_BASE_SPEED
+                            * ALIEN_MULTIPLIER_SPEED
                             if game_status.is_left_move
-                            else game_status.level * ALIEN_BASE_SPEED * ALIEN_MULTIPLIER_SPEED
+                            else game_status.level
+                            * ALIEN_BASE_SPEED
+                            * ALIEN_MULTIPLIER_SPEED
                         )
                         move_y = 0
 
@@ -474,7 +488,9 @@ def main():
                             game_status.is_left_move = not game_status.is_left_move
                             move_x, move_y = 0, ALIEN_DOWN_MOVE
                             game_status.move_interval = max(
-                                1, game_status.move_interval - ALIEN_MOVE_INTERVAL_DECREASE
+                                1,
+                                game_status.move_interval
+                                - ALIEN_MOVE_INTERVAL_DECREASE,
                             )
                             game_status.is_down_move = True
                         else:
@@ -495,7 +511,9 @@ def main():
                     if beam.on_draw:
                         # 下方向に移動する
                         beam.move(
-                            0, ALIEN_BEAM_BASE_SPEED + game_status.level * ALIEN_BEAM_MULTIPLIER
+                            0,
+                            ALIEN_BEAM_BASE_SPEED
+                            + game_status.level * ALIEN_BEAM_MULTIPLIER,
                         )
                         # 画面の一番下に到達した場合
                         if beam.rect.top > WINDOW_HEIGHT:
@@ -507,9 +525,14 @@ def main():
                             beam.on_draw = False
 
                     # ビームが画面上にない場合で、発射タイミング以降となった場合
-                    elif beam.fire_timing < game_status.loop_count and len(game_status.aliens) > 0:
+                    elif (
+                        beam.fire_timing < game_status.loop_count
+                        and len(game_status.aliens) > 0
+                    ):
                         # 現在のエイリアン軍団からランダムで１体を選ぶ
-                        t_alien = game_status.aliens[randint(0, len(game_status.aliens) - 1)]
+                        t_alien = game_status.aliens[
+                            randint(0, len(game_status.aliens) - 1)
+                        ]
                         # ビームの位置をそのエイリアンに合わせる
                         beam.rect.center = t_alien.rect.center
                         # 敵ビームの描画フラグをTrueにする
