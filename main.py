@@ -14,6 +14,7 @@ from pygame.locals import (
     K_LSHIFT,
 )
 from drawable import Drawable, Ship, Beam, Shot, Alien
+from dataclasses import dataclass, field
 
 # ウィンドウ
 WINDOW_WIDTH = 600
@@ -21,7 +22,7 @@ WINDOW_HEIGHT = 600
 SCREEN_LEFT_BOUNDARY = 10
 SCREEN_RIGHT_BOUNDARY = 590
 ALIEN_GAMEOVER_LINE = 550
-WINDOW_SIZE = (WINDOW_WIDTH, WINDOW_WIDTH)
+WINDOW_SIZE = (WINDOW_WIDTH, WINDOW_HEIGHT)
 # キャプション
 GAME_CAPTION = "*** Invader Game ***"
 # 色
@@ -125,9 +126,32 @@ DASH_DURATION = 3  # ダッシュの持続フレーム数
 DASH_COOLDOWN_TIME = 30  # ダッシュのクールダウン（フレーム数）
 
 
-def initialize_game():
-    # ゲーム変数の初期化
-    keymap = []  # キーマップリセット（押しっぱなし防止など）
+@dataclass
+class GameStatus:
+    keymap: list
+    is_gameover: bool
+    is_left_move: bool
+    is_down_move: bool
+    move_interval: int
+    loop_count: int
+    level: int
+    score: int
+    levelup_timer: int
+    ship: Ship
+    burst_remaining: int
+    burst_interval: int
+    dash_cooldown: int
+    is_dashing: bool
+    dash_direction: int
+    dash_timer: int
+    # デフォルト値を持つフィールドは最後に配置
+    aliens: list[Alien] = field(default_factory=list)
+    beams: list[Beam] = field(default_factory=list)
+    shots: list[Shot] = field(default_factory=list)
+
+
+def initialize_game() -> GameStatus:
+    keymap = []
     is_gameover = False
     is_left_move = True
     is_down_move = False
@@ -137,16 +161,13 @@ def initialize_game():
     score = 0
     aliens = []
     beams = []
-    levelup_timer = 0  # レベルアップ表示用タイマー
-
-    # 自機・ショット・敵の生成
+    levelup_timer = 0
     ship = Ship()
-    # 【変更】shots をリストで管理（3点バースト対応）
     shots = []
+    # 3点バースト関連初期化
     burst_remaining = 0
     burst_interval = 0
-
-    # 【追加】緊急回避用変数の初期化
+    # ダッシュ関連初期化
     dash_cooldown = 0
     is_dashing = False
     dash_direction = 0
@@ -171,118 +192,109 @@ def initialize_game():
     for _ in range(ALIEN_TOTAL_BEAM):
         beams.append(Beam())
 
-    return {
-        "keymap": keymap,
-        "is_gameover": is_gameover,
-        "is_left_move": is_left_move,
-        "is_down_move": is_down_move,
-        "move_interval": move_interval,
-        "loop_count": loop_count,
-        "level": level,
-        "score": score,
-        "aliens": aliens,
-        "beams": beams,
-        "levelup_timer": levelup_timer,
-        "ship": ship,
-        "shots": shots,
-        "burst_remaining": burst_remaining,
-        "burst_interval": burst_interval,
-        "dash_cooldown": dash_cooldown,
-        "is_dashing": is_dashing,
-        "dash_direction": dash_direction,
-        "dash_timer": dash_timer,
-    }
+    return GameStatus(
+        keymap,
+        is_gameover,
+        is_left_move,
+        is_down_move,
+        move_interval,
+        loop_count,
+        level,
+        score,
+        levelup_timer,
+        ship,
+        burst_remaining,
+        burst_interval,
+        dash_cooldown,
+        is_dashing,
+        dash_direction,
+        dash_timer,
+        aliens,
+        beams,
+        shots,
+    )
 
 
-def handle_input(
-    keymap,
-    ship,
-    shots,
-    burst_remaining,
-    burst_interval,
-    dash_cooldown,
-    is_dashing,
-    dash_direction,
-    dash_timer,
-):
+def handle_input(game_status: GameStatus) -> tuple[int, GameStatus]:
     # 自機の移動距離は毎回０に初期化する
     ship_move_x = 0
 
-    # 左右キーの場合、自機の移動距離を設定
-    if K_LEFT in keymap or K_a in keymap:
+    if K_LEFT in game_status.keymap or K_a in game_status.keymap:
         ship_move_x = -SHIP_MOVE_SPEED
-    if K_RIGHT in keymap or K_d in keymap:
+    if K_RIGHT in game_status.keymap or K_d in game_status.keymap:
         ship_move_x = SHIP_MOVE_SPEED
 
-        # ===== 緊急回避（ダッシュ）処理 =====
+    # ===== 緊急回避（ダッシュ）処理 =====
     # ダッシュクールダウンを減らす
-    if dash_cooldown > 0:
-        dash_cooldown -= 1
+    if game_status.dash_cooldown > 0:
+        game_status.dash_cooldown -= 1
 
-    # 【追加】Shiftキー + 方向キーでダッシュ開始
-    if K_LSHIFT in keymap and dash_cooldown == 0 and not is_dashing:
+    # Shiftキー + 方向キーでダッシュ開始
+    if (
+        K_LSHIFT in game_status.keymap
+        and game_status.dash_cooldown == 0
+        and not game_status.is_dashing
+    ):
         # 左右どちらかのキーが押されている場合のみダッシュ発動
-        if K_LEFT in keymap or K_a in keymap:
-            is_dashing = True
-            dash_direction = -1  # 左方向
-            dash_timer = DASH_DURATION
-            dash_cooldown = DASH_COOLDOWN_TIME
-        elif K_RIGHT in keymap or K_d in keymap:
-            is_dashing = True
-            dash_direction = 1  # 右方向
-            dash_timer = DASH_DURATION
-            dash_cooldown = DASH_COOLDOWN_TIME
+        if K_LEFT in game_status.keymap or K_a in game_status.keymap:
+            game_status.is_dashing = True
+            game_status.dash_direction = -1  # 左方向
+            game_status.dash_timer = DASH_DURATION
+            game_status.dash_cooldown = DASH_COOLDOWN_TIME
+        elif K_RIGHT in game_status.keymap or K_d in game_status.keymap:
+            game_status.is_dashing = True
+            game_status.dash_direction = 1  # 右方向
+            game_status.dash_timer = DASH_DURATION
+            game_status.dash_cooldown = DASH_COOLDOWN_TIME
 
-    # 【追加】ダッシュ中の移動処理
-    if is_dashing:
-        ship_move_x = DASH_SPEED * dash_direction  # 高速移動
-        dash_timer -= 1
-        if dash_timer <= 0:
-            is_dashing = False  # ダッシュ終了
+    # ダッシュ中の移動処理
+    if game_status.is_dashing:
+        ship_move_x = DASH_SPEED * game_status.dash_direction  # 高速移動
+        game_status.dash_timer -= 1
+        if game_status.dash_timer <= 0:
+            game_status.is_dashing = False  # ダッシュ終了
 
     # ===== 3点バースト発射処理 =====
-    # 【変更】スペースキーでバースト開始（バースト中でなければ）
-    if K_SPACE in keymap and burst_remaining == 0 and burst_interval == 0:
-        burst_remaining = BURST_COUNT  # バースト残数をセット
+    # スペースキーでバースト開始（バースト中でなければ）
+    if (
+        K_SPACE in game_status.keymap
+        and game_status.burst_remaining == 0
+        and game_status.burst_interval == 0
+    ):
+        game_status.burst_remaining = BURST_COUNT  # バースト残数をセット
 
-    # 【追加】バースト間隔タイマーを減らす
-    if burst_interval > 0:
-        burst_interval -= 1
+    # バースト間隔タイマーを減らす
+    if game_status.burst_interval > 0:
+        game_status.burst_interval -= 1
 
-    # 【追加】バースト残数があり、間隔タイマーが0なら弾を発射
-    if burst_remaining > 0 and burst_interval == 0:
+    # バースト残数があり、間隔タイマーが0なら弾を発射
+    if game_status.burst_remaining > 0 and game_status.burst_interval == 0:
         new_shot = Shot()
-        new_shot.rect.center = ship.rect.center
+        new_shot.rect.center = game_status.ship.rect.center
         new_shot.on_draw = True
-        shots.append(new_shot)
-        burst_remaining -= 1  # 残り発射数を減らす
+        game_status.shots.append(new_shot)
+        game_status.burst_remaining -= 1  # 残り発射数を減らす
         # 最後の弾ならクールダウン、途中ならバースト間隔をセット
-        if burst_remaining == 0:
-            burst_interval = BURST_COOLDOWN  # 次のバーストまでのクールダウン
+        if game_status.burst_remaining == 0:
+            game_status.burst_interval = (
+                BURST_COOLDOWN  # 次のバーストまでのクールダウン
+            )
         else:
-            burst_interval = BURST_DELAY  # 次の弾までの間隔
+            game_status.burst_interval = BURST_DELAY  # 次の弾までの間隔
 
-    return {
-        "ship_move_x": ship_move_x,
-        "shots": shots,
-        "burst_remaining": burst_remaining,
-        "burst_interval": burst_interval,
-        "dash_cooldown": dash_cooldown,
-        "is_dashing": is_dashing,
-        "dash_direction": dash_direction,
-        "dash_timer": dash_timer,
-    }
+    return ship_move_x, game_status
 
-def setup_next_level(level):
-    move_interval = max(
+
+def setup_next_level(game_status: GameStatus) -> GameStatus:
+    game_status.move_interval = max(
         ALIEN_MOVE_INTERVAL_MIN,
         ALIEN_MOVE_INTERVAL_BASE
-        - (level - 1) * ALIEN_MOVE_INTERVAL_DECREASE,
+        - (game_status.level - 1) * ALIEN_MOVE_INTERVAL_DECREASE,
     )
-    is_left_move = True
-    is_down_move = False
-    aliens = []
-    beams = []
+    game_status.is_left_move = True
+    game_status.is_down_move = False
+    game_status.aliens = []
+    game_status.beams = []
     for ypos in range(ALIEN_ROW):
         offset = (
             ALIEN_SPRITE_OFFSET_TOP
@@ -293,47 +305,38 @@ def setup_next_level(level):
             x = xpos * ALIEN_SPACING_X + ALIEN_START_X
             y = ypos * ALIEN_SPACING_Y + ALIEN_START_Y
             rect = Rect(x, y, ALIEN_SPRITE_SIZE, ALIEN_SPRITE_SIZE)
-            score_value = (
-                ALIEN_SCORE_ROW_MULTIPLIER - ypos
-            ) * ALIEN_SCORE_BASE
+            score_value = (ALIEN_SCORE_ROW_MULTIPLIER - ypos) * ALIEN_SCORE_BASE
             alien = Alien(rect, offset, score_value)
-            aliens.append(alien)
+            game_status.aliens.append(alien)
     # 敵ビーム生成
     for _ in range(ALIEN_TOTAL_BEAM):
-        beams.append(Beam())
-    level += 1
-    levelup_timer = LEVELUP_DISPLAY_FRAMES
+        game_status.beams.append(Beam())
 
-    return {
-        "move_interval": move_interval,
-        "is_left_move": is_left_move,
-        "is_down_move": is_down_move,
-        "aliens": aliens,
-        "beams": beams,
-        "level": level,
-        "levelup_timer": levelup_timer,
-    }
+    game_status.level += 1
+    game_status.levelup_timer = LEVELUP_DISPLAY_FRAMES
 
-def draw_game_screen(ship, shots, aliens, beams, score, level,
-                     dash_cooldown, is_dashing, loop_count, levelup_timer):
+    return game_status
+
+
+def draw_game_screen(game_status: GameStatus) -> GameStatus:
     """ゲーム画面を描画"""
     surface.fill(COLOR_BLACK)
-    ship.draw()
+    game_status.ship.draw()
     # 全てのショットを描画（リスト対応）
-    for s in shots:
+    for s in game_status.shots:
         s.draw()
-    for alien in aliens:
+    for alien in game_status.aliens:
         alien.draw()
-    for beam in beams:
+    for beam in game_status.beams:
         beam.draw()
 
     # スコアの描画
-    score_str = str(score).zfill(5)
+    score_str = str(game_status.score).zfill(5)
     score_image = SMALL_FONT.render(score_str, True, COLOR_GREEN)
     surface.blit(score_image, (SCORE_POSITION_X, SCORE_POSITION_Y))
 
     # レベルの描画
-    level_str = f"Level {level}"
+    level_str = f"Level {game_status.level}"
     level_image = SMALL_FONT.render(level_str, True, COLOR_GREEN)
     surface.blit(level_image, (LEVEL_POSITION_X, LEVEL_POSITION_Y))
 
@@ -347,13 +350,13 @@ def draw_game_screen(ship, shots, aliens, beams, score, level,
         (dash_gauge_x, dash_gauge_y, DASH_GUAGE_WIDTH, DASH_GUAGE_HEIGHT),
     )
     # ゲージ本体（クールダウン残量に応じて増減） 本体の上に重ねて描画
-    if dash_cooldown == 0:
+    if game_status.dash_cooldown == 0:
         gauge_color = COLOR_CYAN
         gauge_fill = DASH_GUAGE_WIDTH
     else:
         gauge_color = COLOR_ORANGE
         gauge_fill = int(
-            DASH_GUAGE_WIDTH * (1 - dash_cooldown / DASH_COOLDOWN_TIME)
+            DASH_GUAGE_WIDTH * (1 - game_status.dash_cooldown / DASH_COOLDOWN_TIME)
         )
     pygame.draw.rect(
         surface,
@@ -361,7 +364,7 @@ def draw_game_screen(ship, shots, aliens, beams, score, level,
         (dash_gauge_x, dash_gauge_y, gauge_fill, DASH_GUAGE_HEIGHT),
     )
     # ダッシュ中は点滅表示
-    if is_dashing and loop_count % 2 == 0:
+    if game_status.is_dashing and game_status.loop_count % 2 == 0:
         dash_rect = DASH_MESSAGE_SURFACE.get_rect()
         dash_rect.center = (
             WINDOW_WIDTH // 2,
@@ -370,24 +373,23 @@ def draw_game_screen(ship, shots, aliens, beams, score, level,
         surface.blit(DASH_MESSAGE_SURFACE, dash_rect.topleft)
 
     # レベルアップ表示
-    if levelup_timer > 0:
+    if game_status.levelup_timer > 0:
         levelup_rect = LEVEL_UP_MESSAGE_SURFACE.get_rect()
         levelup_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
         surface.blit(LEVEL_UP_MESSAGE_SURFACE, levelup_rect.topleft)
-    
+
     # levelup_timerをデクリメント
-    levelup_timer = max(0, levelup_timer - 1)
-    
-    return {
-        "levelup_timer": levelup_timer
-    }
+    game_status.levelup_timer = max(0, game_status.levelup_timer - 1)
+
+    return game_status
+
 
 # ======= メイン処理 =======
 def main():
     # ゲームの初期状態設定
-    game_state = GAME_STATE_TITLE
-    keymap = []  # キーマップ
-
+    current_game_state = GAME_STATE_TITLE
+    game_status = None
+    
     # ======= メインループ =======
     while True:
         # イベント処理（全状態共通）
@@ -396,16 +398,23 @@ def main():
                 pygame.quit()
                 sys.exit()
             elif event.type == KEYDOWN:
-                if event.key not in keymap:
-                    keymap.append(event.key)
+                # タイトル画面ではローカルkeymapを使用し、ゲーム中はgame_status.keymapを使用
+                if current_game_state == GAME_STATE_TITLE:
+                    # タイトル画面用の一時的なキーチェック
+                    if event.key == K_SPACE:
+                        game_status = initialize_game()
+                        current_game_state = GAME_STATE_PLAY
+                elif game_status is not None:
+                    if event.key not in game_status.keymap:
+                        game_status.keymap.append(event.key)
             elif event.type == KEYUP:
-                if event.key in keymap:
-                    keymap.remove(event.key)
+                if game_status is not None and event.key in game_status.keymap:
+                    game_status.keymap.remove(event.key)
 
         # ------------------------------------------------
         # 状態1: タイトル画面
         # ------------------------------------------------
-        if game_state == GAME_STATE_TITLE:
+        if current_game_state == GAME_STATE_TITLE:
             # 画面クリア
             surface.fill(COLOR_BLACK)
 
@@ -421,84 +430,39 @@ def main():
             if (pygame.time.get_ticks() // MESSAGE_BLINK_INTERVAL) % 2 == 0:
                 surface.blit(START_MESSAGE_SURFACE, start_rect.topleft)
 
-            # スペースキーでゲーム開始（初期化処理）
-            if K_SPACE in keymap:
-                game_vars = initialize_game()
-                # 辞書から各変数を取り出す
-                keymap = game_vars["keymap"]
-                is_gameover = game_vars["is_gameover"]
-                is_left_move = game_vars["is_left_move"]
-                is_down_move = game_vars["is_down_move"]
-                move_interval = game_vars["move_interval"]
-                loop_count = game_vars["loop_count"]
-                level = game_vars["level"]
-                score = game_vars["score"]
-                aliens = game_vars["aliens"]
-                beams = game_vars["beams"]
-                levelup_timer = game_vars["levelup_timer"]
-                ship = game_vars["ship"]
-                shots = game_vars["shots"]
-                burst_remaining = game_vars["burst_remaining"]
-                burst_interval = game_vars["burst_interval"]
-                dash_cooldown = game_vars["dash_cooldown"]
-                is_dashing = game_vars["is_dashing"]
-                dash_direction = game_vars["dash_direction"]
-                dash_timer = game_vars["dash_timer"]
-                game_state = GAME_STATE_PLAY
-
         # ------------------------------------------------
         # 状態2: ゲームプレイ中
         # ------------------------------------------------
-        elif game_state == GAME_STATE_PLAY:
+        elif current_game_state == GAME_STATE_PLAY:
             # ======= 入力処理 =======
-            game_handle = handle_input(
-                keymap,
-                ship,
-                shots,
-                burst_remaining,
-                burst_interval,
-                dash_cooldown,
-                is_dashing,
-                dash_direction,
-                dash_timer,
-            )
-            
-            ship_move_x = game_handle["ship_move_x"]
-            shots = game_handle["shots"]
-            burst_remaining = game_handle["burst_remaining"]
-            burst_interval = game_handle["burst_interval"]
-            dash_cooldown = game_handle["dash_cooldown"]
-            is_dashing = game_handle["is_dashing"]
-            dash_direction = game_handle["dash_direction"]
-            dash_timer = game_handle["dash_timer"]
-            
-            
+            ship_move_x, game_status = handle_input(game_status)
+
             # ======= ゲーム内処理 =======
-            if not is_gameover:
-                loop_count += 1
-                ship.move(ship_move_x, 0)
+            if not game_status.is_gameover:
+                game_status.loop_count += 1
+                game_status.ship.move(ship_move_x, 0)
 
                 # 【変更】自機ショットを移動する（リスト内の全弾を処理）
-                for s in shots[:]:
+                for s in game_status.shots[:]:
                     s.move(0, -SHOT_MOVE_SPEED)
                     # 自機ショットが画面外に行った場合、リストから削除
                     if s.rect.bottom < 0:
-                        shots.remove(s)
+                        game_status.shots.remove(s)
 
                 # ======= エイリアン軍団を移動する =======
                 # ループカウンタが、移動するタイミングの場合
-                if loop_count % move_interval == 0:
+                if game_status.loop_count % game_status.move_interval == 0:
                     # エイリアンの範囲取得処理
-                    if len(aliens) > 0:
-                        area = aliens[0].rect.copy()
-                        for alien in aliens:
+                    if len(game_status.aliens) > 0:
+                        area = game_status.aliens[0].rect.copy()
+                        for alien in game_status.aliens:
                             area.union_ip(alien.rect)
 
                         # 左移動フラグに応じて、移動方向（左右移動距離）を決める
                         move_x = (
-                            -level * ALIEN_BASE_SPEED * ALIEN_MULTIPLIER_SPEED
-                            if is_left_move
-                            else level * ALIEN_BASE_SPEED * ALIEN_MULTIPLIER_SPEED
+                            -game_status.level * ALIEN_BASE_SPEED * ALIEN_MULTIPLIER_SPEED
+                            if game_status.is_left_move
+                            else game_status.level * ALIEN_BASE_SPEED * ALIEN_MULTIPLIER_SPEED
                         )
                         move_y = 0
 
@@ -506,109 +470,103 @@ def main():
                         if (
                             area.left < SCREEN_LEFT_BOUNDARY
                             or area.right > SCREEN_RIGHT_BOUNDARY
-                        ) and not is_down_move:
-                            is_left_move = not is_left_move
+                        ) and not game_status.is_down_move:
+                            game_status.is_left_move = not game_status.is_left_move
                             move_x, move_y = 0, ALIEN_DOWN_MOVE
-                            move_interval = max(1, move_interval - 2)
-                            is_down_move = True
+                            game_status.move_interval = max(
+                                1, game_status.move_interval - ALIEN_MOVE_INTERVAL_DECREASE
+                            )
+                            game_status.is_down_move = True
                         else:
-                            is_down_move = False
+                            game_status.is_down_move = False
 
                         # 設定した移動距離に応じて、エイリアンを移動する
-                        for alien in aliens:
+                        for alien in game_status.aliens:
                             alien.move(move_x, move_y)
 
                         # エイリアンが最下段まで来たら、ゲームオーバー
                         if area.bottom > ALIEN_GAMEOVER_LINE:
-                            is_gameover = True
-                            game_state = GAME_STATE_GAMEOVER
+                            game_status.is_gameover = True
+                            current_game_state = GAME_STATE_GAMEOVER
 
                 # 敵ビームを移動
-                for beam in beams:
+                for beam in game_status.beams:
                     # 敵ビームが画面上にある場合
                     if beam.on_draw:
                         # 下方向に移動する
                         beam.move(
-                            0, ALIEN_BEAM_BASE_SPEED + level * ALIEN_BEAM_MULTIPLIER
+                            0, ALIEN_BEAM_BASE_SPEED + game_status.level * ALIEN_BEAM_MULTIPLIER
                         )
                         # 画面の一番下に到達した場合
                         if beam.rect.top > WINDOW_HEIGHT:
                             # 次の発射タイミングを、ループカウンタ＋αにする
-                            beam.fire_timing = loop_count + randint(
+                            beam.fire_timing = game_status.loop_count + randint(
                                 ALIEN_BEAM_FIRE_DELAY_MIN, ALIEN_BEAM_FIRE_DELAY_MAX
                             )
                             # 敵ビームの描画フラグをFalseにする
                             beam.on_draw = False
 
                     # ビームが画面上にない場合で、発射タイミング以降となった場合
-                    elif beam.fire_timing < loop_count and len(aliens) > 0:
+                    elif beam.fire_timing < game_status.loop_count and len(game_status.aliens) > 0:
                         # 現在のエイリアン軍団からランダムで１体を選ぶ
-                        t_alien = aliens[randint(0, len(aliens) - 1)]
+                        t_alien = game_status.aliens[randint(0, len(game_status.aliens) - 1)]
                         # ビームの位置をそのエイリアンに合わせる
                         beam.rect.center = t_alien.rect.center
                         # 敵ビームの描画フラグをTrueにする
                         beam.on_draw = True
 
                     # 自機の四角が敵ビームの中心と重なった場合
-                    if ship.rect.collidepoint(beam.rect.center):
-                        is_gameover = True
-                        game_state = GAME_STATE_GAMEOVER
+                    if game_status.ship.rect.collidepoint(beam.rect.center):
+                        game_status.is_gameover = True
+                        current_game_state = GAME_STATE_GAMEOVER
 
                     # ショットとエイリアンの衝突判定（リスト対応）
-                    for s in shots[:]:
+                    for s in game_status.shots[:]:
                         hit = False
                         temp_aliens = []
-                        for alien in aliens:
+                        for alien in game_status.aliens:
                             # 弾がエイリアンに当たった場合
                             if alien.rect.collidepoint(s.rect.center) and not hit:
-                                score += alien.score
+                                game_status.score += alien.score
                                 hit = True  # 1発の弾で1体のみ倒す
                             else:
                                 temp_aliens.append(alien)
-                        aliens = temp_aliens
+                        game_status.aliens = temp_aliens
                         # 当たった弾はリストから削除
                         if hit:
-                            shots.remove(s)
+                            game_status.shots.remove(s)
 
                 # 全エイリアンと倒した場合次のレベルへ（リセット）
-                if len(aliens) == 0:
-                    setup = setup_next_level(level)
-                    move_interval = setup["move_interval"]
-                    is_left_move = setup["is_left_move"]
-                    is_down_move = setup["is_down_move"]
-                    aliens = setup["aliens"]
-                    beams = setup["beams"]
-                    level = setup["level"]
-                    levelup_timer = setup["levelup_timer"]
-                    
+                if len(game_status.aliens) == 0:
+                    game_status = setup_next_level(game_status)
+
             # ======= 描画処理 =======
-            draw_result = draw_game_screen(ship, shots, aliens, beams, score, level,
-                                          dash_cooldown, is_dashing, loop_count, levelup_timer)
-            levelup_timer = draw_result["levelup_timer"]
+            game_status = draw_game_screen(game_status)
+
         # ------------------------------------------------
         # 状態3: ゲームオーバー / クリア
         # ------------------------------------------------
-        elif game_state in (GAME_STATE_GAMEOVER, GAME_STATE_CLEAR):
+        elif current_game_state in (GAME_STATE_GAMEOVER, GAME_STATE_CLEAR):
             surface.fill(COLOR_BLACK)
-            if ship:
-                ship.draw()
-            for alien in aliens:
+            if game_status.is_gameover:
+                game_status.ship.draw()
+            for alien in game_status.aliens:
                 alien.draw()
-            for beam in beams:
+            for beam in game_status.beams:
                 beam.draw()
 
             # スコア描画
-            score_str = str(score).zfill(5)
+            score_str = str(game_status.score).zfill(5)
             score_image = SMALL_FONT.render(score_str, True, COLOR_GREEN)
             surface.blit(score_image, (SCORE_POSITION_X, SCORE_POSITION_Y))
 
             # レベルの描画
-            level_str = f"Level {level}"
+            level_str = f"Level {game_status.level}"
             level_image = SMALL_FONT.render(level_str, True, COLOR_GREEN)
             surface.blit(level_image, (LEVEL_POSITION_X, LEVEL_POSITION_Y))
 
             # メッセージ表示
-            if game_state == GAME_STATE_CLEAR:
+            if current_game_state == GAME_STATE_CLEAR:
                 msg_rect = CLEAR_MESSAGE_SURFACE.get_rect()
                 msg_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
                 surface.blit(CLEAR_MESSAGE_SURFACE, msg_rect.topleft)
@@ -630,12 +588,11 @@ def main():
             # スペースキーでリスタート
             # 「GAMEOVER」時にSPACEキーが入力されているとタイトル画面へ、改めて入力されると即リスタートになる
             # ゲーム性にそこまで影響がないので放置する
-            if K_SPACE in keymap:
-                game_state = GAME_STATE_TITLE
+            if K_SPACE in game_status.keymap:
+                current_game_state = GAME_STATE_TITLE
                 # キー入力を一度クリアしておかないと、タイトル画面で即スタートしてしまうのを防ぐ
-                if K_SPACE in keymap:
-                    keymap.remove(K_SPACE)
-
+                if K_SPACE in game_status.keymap:
+                    game_status.keymap.remove(K_SPACE)
         # 画面更新
         pygame.display.update()
         # 一定間隔の処理
