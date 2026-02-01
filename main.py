@@ -51,6 +51,7 @@ current_bgm = None  # 現在再生中のBGMを記録
 # 効果音の読み込み
 SHOOT_SOUND = pygame.mixer.Sound("BGM/shoot.wav")
 DEATH_SOUND = pygame.mixer.Sound("BGM/death.wav")
+TELEPORT_SOUND = pygame.mixer.Sound("BGM/teleport.mp3")
 
 # Drawableクラスのクラス変数に、ゲームの画面情報を設定する
 Drawable.set_window_info(surface, WINDOW_SIZE)
@@ -298,6 +299,7 @@ def update_dash_system(base_move: int, game_status: GameStatus) -> tuple[int, Ga
     # ダッシュ中の移動処理
     if game_status.is_dashing:
         base_move = DASH_SPEED * game_status.dash_direction  # 高速移動
+        TELEPORT_SOUND.play()  # テレポート音を再生
         game_status.dash_timer -= 1
         if game_status.dash_timer <= 0:
             game_status.is_dashing = False  # ダッシュ終了
