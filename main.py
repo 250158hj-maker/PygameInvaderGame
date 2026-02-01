@@ -52,6 +52,7 @@ current_bgm = None  # 現在再生中のBGMを記録
 SHOOT_SOUND = pygame.mixer.Sound("BGM/shoot.wav")
 DEATH_SOUND = pygame.mixer.Sound("BGM/death.wav")
 TELEPORT_SOUND = pygame.mixer.Sound("BGM/teleport.mp3")
+LEVEL_UP_SOUND = pygame.mixer.Sound("BGM/level_up.mp3")
 
 # Drawableクラスのクラス変数に、ゲームの画面情報を設定する
 Drawable.set_window_info(surface, WINDOW_SIZE)
@@ -127,7 +128,7 @@ LEVELUP_DISPLAY_FRAMES = 12
 # ゲーム設定
 GAME_FPS = 20
 # 3点バースト
-BURST_COUNT = 3  # 1回のバーストで発射する弾数
+BURST_COUNT = 10  # 1回のバーストで発射する弾数
 BURST_DELAY = 3  # バースト間の発射間隔（フレーム数）
 BURST_COOLDOWN = 15  # 次のバースト開始までのクールダウン
 # 緊急回避機能
@@ -591,6 +592,7 @@ def main():
 
                 # 全エイリアンと倒した場合次のレベルへ（リセット）
                 if len(game_status.aliens) == 0:
+                    LEVEL_UP_SOUND.play()  # レベルアップ音を再生
                     game_status = setup_next_level(game_status)
 
             # ======= 描画処理 =======
