@@ -41,6 +41,17 @@ surface = pygame.display.set_mode(WINDOW_SIZE)
 clock = pygame.time.Clock()
 pygame.display.set_caption(GAME_CAPTION)
 
+# BGM初期化
+pygame.mixer.init()
+BGM_TITLE = "BGM/TITLE.mp3"
+BGM_PLAY = "BGM/space-invaders.mp3"
+BGM_GAMEOVER = "BGM/GAMEOVER.mp3"
+current_bgm = None  # 現在再生中のBGMを記録
+
+# 効果音の読み込み
+SHOOT_SOUND = pygame.mixer.Sound("BGM/shoot.wav")
+DEATH_SOUND = pygame.mixer.Sound("BGM/death.wav")
+
 # Drawableクラスのクラス変数に、ゲームの画面情報を設定する
 Drawable.set_window_info(surface, WINDOW_SIZE)
 
@@ -247,6 +258,7 @@ def update_burst_shots(game_status: GameStatus) -> GameStatus:
         new_shot.rect.center = game_status.ship.rect.center
         new_shot.on_draw = True
         game_status.shots.append(new_shot)
+        SHOOT_SOUND.play()  # 発射音を再生
         game_status.burst_remaining -= 1  # 残り発射数を減らす
         # 最後の弾ならクールダウン、途中ならバースト間隔をセット
         if game_status.burst_remaining == 0:
@@ -392,6 +404,15 @@ def draw_game_screen(game_status: GameStatus) -> GameStatus:
     return game_status
 
 
+def play_bgm(bgm_file: str):
+    """指定されたBGMを再生（既に再生中の場合はスキップ）"""
+    global current_bgm
+    if current_bgm != bgm_file:
+        pygame.mixer.music.load(bgm_file)
+        pygame.mixer.music.play(-1)  # -1でループ再生
+        current_bgm = bgm_file
+
+
 # ======= メイン処理 =======
 def main():
     # ゲームの初期状態設定
@@ -423,6 +444,9 @@ def main():
         # 状態1: タイトル画面
         # ------------------------------------------------
         if current_game_state == GAME_STATE_TITLE:
+            # タイトルBGM再生
+            play_bgm(BGM_TITLE)
+            
             # 画面クリア
             surface.fill(COLOR_BLACK)
 
@@ -442,6 +466,9 @@ def main():
         # 状態2: ゲームプレイ中
         # ------------------------------------------------
         elif current_game_state == GAME_STATE_PLAY:
+            # ゲームプレイBGM再生
+            play_bgm(BGM_PLAY)
+            
             # ======= 入力処理 =======
             base_move = handle_input(game_status)
             ship_move_x, game_status = update_dash_system(base_move, game_status)
@@ -540,6 +567,7 @@ def main():
 
                     # 自機の四角が敵ビームの中心と重なった場合
                     if game_status.ship.rect.collidepoint(beam.rect.center):
+                        DEATH_SOUND.play()  # 被弾音を再生
                         game_status.is_gameover = True
                         current_game_state = GAME_STATE_GAMEOVER
 
@@ -570,6 +598,9 @@ def main():
         # 状態3: ゲームオーバー / クリア
         # ------------------------------------------------
         elif current_game_state in (GAME_STATE_GAMEOVER, GAME_STATE_CLEAR):
+            # ゲームオーバーBGM再生
+            play_bgm(BGM_GAMEOVER)
+            
             surface.fill(COLOR_BLACK)
             if game_status.is_gameover:
                 game_status.ship.draw()
