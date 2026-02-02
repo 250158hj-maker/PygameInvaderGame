@@ -85,6 +85,31 @@ GAME_STATE_GAMEOVER = "GAMEOVER"
 GAME_STATE_CLEAR = "CLEAR"
 
 # -----ゲーム内処理（ゲーム性に直結する定数）-----
+# 自機とショット
+SHIP_MOVE_SPEED = 8
+SHOT_MOVE_SPEED = 25
+# UI配置
+SCORE_POSITION_X = 500
+SCORE_POSITION_Y = 10
+LEVEL_POSITION_X = 25
+LEVEL_POSITION_Y = 10
+DASH_GAUGE_OFFSET_Y = 20
+DASH_TEXT_OFFSET_Y = 30
+RETRY_MESSAGE_OFFSET_Y = 80
+MESSAGE_BLINK_INTERVAL = 500  # ミリ秒
+LEVELUP_DISPLAY_FRAMES = 12
+# ゲーム設定
+GAME_FPS = 20
+# 3点バースト
+BURST_COUNT = 3  # 1回のバーストで発射する弾数
+BURST_DELAY = 3  # バースト間の発射間隔（フレーム数）
+BURST_COOLDOWN = 15  # 次のバースト開始までのクールダウン
+# 緊急回避機能
+DASH_GAUGE_WIDTH = 100
+DASH_GAUGE_HEIGHT = 10
+DASH_SPEED = 40  # ダッシュ時の移動速度
+DASH_DURATION = 3  # ダッシュの持続フレーム数
+DASH_COOLDOWN_TIME = 30  # ダッシュのクールダウン（フレーム数）
 # エイリアン配置
 ALIEN_ROW = 4
 ALIEN_COL = 10
@@ -107,36 +132,11 @@ ALIEN_MOVE_INTERVAL_MIN = 10
 ALIEN_MOVE_INTERVAL_DECREASE = 2
 ALIEN_MOVE_INTERVAL_BASE = 20
 # エイリアンビーム
-ALIEN_TOTAL_BEAM = 3
+ALIEN_TOTAL_BEAM = BURST_COUNT * 3
 ALIEN_BEAM_BASE_SPEED = 12
 ALIEN_BEAM_MULTIPLIER = 2
 ALIEN_BEAM_FIRE_DELAY_MIN = 20
 ALIEN_BEAM_FIRE_DELAY_MAX = 200
-# 自機とショット
-SHIP_MOVE_SPEED = 8
-SHOT_MOVE_SPEED = 25
-# UI配置
-SCORE_POSITION_X = 500
-SCORE_POSITION_Y = 10
-LEVEL_POSITION_X = 25
-LEVEL_POSITION_Y = 10
-DASH_GAUGE_OFFSET_Y = 20
-DASH_TEXT_OFFSET_Y = 30
-RETRY_MESSAGE_OFFSET_Y = 80
-MESSAGE_BLINK_INTERVAL = 500  # ミリ秒
-LEVELUP_DISPLAY_FRAMES = 12
-# ゲーム設定
-GAME_FPS = 20
-# 3点バースト
-BURST_COUNT = 10  # 1回のバーストで発射する弾数
-BURST_DELAY = 3  # バースト間の発射間隔（フレーム数）
-BURST_COOLDOWN = 15  # 次のバースト開始までのクールダウン
-# 緊急回避機能
-DASH_GUAGE_WIDTH = 100
-DASH_GUAGE_HEIGHT = 10
-DASH_SPEED = 40  # ダッシュ時の移動速度
-DASH_DURATION = 3  # ダッシュの持続フレーム数
-DASH_COOLDOWN_TIME = 30  # ダッシュのクールダウン（フレーム数）
 
 
 @dataclass
@@ -273,7 +273,9 @@ def update_burst_shots(game_status: GameStatus) -> GameStatus:
     return game_status
 
 
-def update_dash_system(base_move: int, game_status: GameStatus) -> tuple[int, GameStatus]:
+def update_dash_system(
+    base_move: int, game_status: GameStatus
+) -> tuple[int, GameStatus]:
     # ===== 緊急回避（ダッシュ）処理 =====
     # ダッシュクールダウンを減らす
     if game_status.dash_cooldown > 0:
@@ -364,27 +366,27 @@ def draw_game_screen(game_status: GameStatus) -> GameStatus:
     surface.blit(level_image, (LEVEL_POSITION_X, LEVEL_POSITION_Y))
 
     # ダッシュゲージの描画（画面下部）
-    dash_gauge_x = WINDOW_WIDTH // 2 - DASH_GUAGE_WIDTH // 2
+    dash_gauge_x = WINDOW_WIDTH // 2 - DASH_GAUGE_WIDTH // 2
     dash_gauge_y = WINDOW_HEIGHT - DASH_GAUGE_OFFSET_Y
     # ゲージ背景
     pygame.draw.rect(
         surface,
         COLOR_GRAY,
-        (dash_gauge_x, dash_gauge_y, DASH_GUAGE_WIDTH, DASH_GUAGE_HEIGHT),
+        (dash_gauge_x, dash_gauge_y, DASH_GAUGE_WIDTH, DASH_GAUGE_HEIGHT),
     )
     # ゲージ本体（クールダウン残量に応じて増減） 本体の上に重ねて描画
     if game_status.dash_cooldown == 0:
         gauge_color = COLOR_CYAN
-        gauge_fill = DASH_GUAGE_WIDTH
+        gauge_fill = DASH_GAUGE_WIDTH
     else:
         gauge_color = COLOR_ORANGE
         gauge_fill = int(
-            DASH_GUAGE_WIDTH * (1 - game_status.dash_cooldown / DASH_COOLDOWN_TIME)
+            DASH_GAUGE_WIDTH * (1 - game_status.dash_cooldown / DASH_COOLDOWN_TIME)
         )
     pygame.draw.rect(
         surface,
         gauge_color,
-        (dash_gauge_x, dash_gauge_y, gauge_fill, DASH_GUAGE_HEIGHT),
+        (dash_gauge_x, dash_gauge_y, gauge_fill, DASH_GAUGE_HEIGHT),
     )
     # ダッシュ中は点滅表示
     if game_status.is_dashing and game_status.loop_count % 2 == 0:
@@ -449,7 +451,7 @@ def main():
         if current_game_state == GAME_STATE_TITLE:
             # タイトルBGM再生
             play_bgm(BGM_TITLE)
-            
+
             # 画面クリア
             surface.fill(COLOR_BLACK)
 
@@ -471,7 +473,7 @@ def main():
         elif current_game_state == GAME_STATE_PLAY:
             # ゲームプレイBGM再生
             play_bgm(BGM_PLAY)
-            
+
             # ======= 入力処理 =======
             base_move = handle_input(game_status)
             ship_move_x, game_status = update_dash_system(base_move, game_status)
@@ -604,7 +606,7 @@ def main():
         elif current_game_state in (GAME_STATE_GAMEOVER, GAME_STATE_CLEAR):
             # ゲームオーバーBGM再生
             play_bgm(BGM_GAMEOVER)
-            
+
             surface.fill(COLOR_BLACK)
             if game_status.is_gameover:
                 game_status.ship.draw()
